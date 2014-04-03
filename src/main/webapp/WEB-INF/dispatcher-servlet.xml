@@ -46,7 +46,7 @@
 		  class="org.springframework.web.servlet.mvc.ParameterizableViewController"
 		  p:viewName="duo" />
 	
-	<!--	Old way of SPRING-->
+		<!--	Old way of SPRING-->
 	<!--	 <bean name="/duo.htm" class="edu.uchicago.duo.web.DuoController">
 		<property name="duoallikeys" ref="duoallintegrationkeys" />
 		<property name="duoadminfunc">

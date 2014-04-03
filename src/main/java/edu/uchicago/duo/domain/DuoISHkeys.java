@@ -1,3 +1,7 @@
+/**
+ * @author Daniel Yu, danielyu@uchicago.edu
+ */
+
 package edu.uchicago.duo.domain;
 
 public class DuoISHkeys {
