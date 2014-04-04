@@ -1,4 +1,6 @@
-<%@taglib uri="http://www.springframework.org/tags/form" prefix="form"%>
+<%@ taglib prefix="form" uri="http://www.springframework.org/tags/form"%>
+<%@ taglib prefix = "spring" uri = "http://www.springframework.org/tags" %>
+<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
 <!DOCTYPE html>
 <html>
@@ -8,6 +10,11 @@
     </head>
     <body>
         <h1>Duo Enrollment</h1>
+		
+		<c:if test="${existingUser}">
+			<h1><spring:message code = "UserExist" /></h1>
+		</c:if>
+		
 		<form:form method="post" commandName="DuoPerson">
 			<table>
 				<tr>

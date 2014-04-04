@@ -8,7 +8,7 @@
     </head>
     <body>
         <h1>Duo Enrollment</h1>
-		<h2>Your Phone Number</h2>
+		<h2>Device Operating System</h2>
 		<form:form method="post" commandName="DuoPerson">
 			<table>
 				<tr>

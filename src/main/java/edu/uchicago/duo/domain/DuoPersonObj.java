@@ -1,11 +1,12 @@
 /**
  * @author Daniel Yu, danielyu@uchicago.edu
  */
-
 package edu.uchicago.duo.domain;
 
 import edu.uchicago.duo.validator.PhoneConstraint;
 import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Size;
+import org.hibernate.validator.constraints.Length;
 import org.hibernate.validator.constraints.NotEmpty;
 import org.springframework.stereotype.Component;
 
@@ -18,13 +19,67 @@ public class DuoPersonObj {
 	//Below using Overwritten own validation via Annotation
 	@PhoneConstraint
 	String phonenumber;
-	
 	String username;
+	String fullName;
+	String email;
 	String user_id;
 	String phone_id;
 	String QRcode;
-	String choosenDevice = "mobile";
-	String deviceOS = "apple ios";
+	String choosenDevice;
+	String deviceOS;
+	String tokenId;
+	String tokenType;
+	String tokenSerial;
+	String tabletName;
+
+	
+	public String getFullName() {
+		return fullName;
+	}
+
+	public void setFullName(String fullName) {
+		this.fullName = fullName;
+	}
+	
+	public String getEmail() {
+		return email;
+	}
+
+	public void setEmail(String email) {
+		this.email = email;
+	}
+
+	public String getTabletName() {
+		return tabletName;
+	}
+
+	public void setTabletName(String tabletName) {
+		this.tabletName = tabletName;
+	}
+
+	public String getTokenId() {
+		return tokenId;
+	}
+
+	public void setTokenId(String tokenId) {
+		this.tokenId = tokenId;
+	}
+
+	public String getTokenType() {
+		return tokenType;
+	}
+
+	public void setTokenType(String tokenType) {
+		this.tokenType = tokenType;
+	}
+
+	public String getTokenSerial() {
+		return tokenSerial;
+	}
+
+	public void setTokenSerial(String tokenSerial) {
+		this.tokenSerial = tokenSerial;
+	}
 
 	public String getQRcode() {
 		return QRcode;

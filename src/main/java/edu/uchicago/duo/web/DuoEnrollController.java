@@ -1,7 +1,6 @@
 /**
  * @author Daniel Yu, danielyu@uchicago.edu
  */
-
 package edu.uchicago.duo.web;
 
 import edu.uchicago.duo.domain.DuoAllIntegrationKeys;
@@ -12,12 +11,8 @@ import edu.uchicago.duo.validator.DeviceExistDuoValidator;
 import java.io.UnsupportedEncodingException;
 import java.sql.Date;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
-import javax.inject.Scope;
-import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import javax.validation.Valid;
 import org.apache.log4j.Logger;
@@ -81,6 +76,8 @@ public class DuoEnrollController {
 //		model.addAttribute("duopersonobj", duopersonobj);
 
 //		duoperson.setUsername(session.getAttribute("username").toString());
+		duoperson.setChoosenDevice("mobile");
+		duoperson.setDeviceOS("apple ios");
 		model.addAttribute("DuoPerson", duoperson);
 
 		//return form view
@@ -99,17 +96,35 @@ public class DuoEnrollController {
 			@Valid @ModelAttribute("DuoPerson") DuoPersonObj duoperson,
 			BindingResult result, SessionStatus status, ModelMap model) throws UnsupportedEncodingException, JSONException, Exception {
 
+		//Redirect for Enroll Another Device
 		if (nextPage == 0) {
-			//model.addAttribute("DuoPerson", new DuoPersonObj());
+			//model.addAttribute("DuoPerson", new DuoPersonObj());		//Thinking about emptying all info of Bean or just some?
 			return "DuoEnrollStep1";
 		}
-		
-		if (nextPage == 3) {
-			if (duoperson.getChoosenDevice().equals("tablet")){
-				return "DuoEnrollStep4";
+
+		if (nextPage == 2) {
+			String userId = duoUsrService.getObjByParam(duoperson.getUsername(), null, "userId");
+			duoperson.setUser_id(userId);
+
+			if (userId != null) {
+				model.put("existingUser", true);
 			}
 		}
 
+		//Redirect Depends on the type of Device that is being enroll
+		if (nextPage == 3) {
+			switch (duoperson.getChoosenDevice()) {
+				case "tablet":
+					duoperson.setDeviceOS(null);
+					return "DuoEnrollTablet";
+//					return "DuoEnrollStep4";
+				case "token":
+					return "DuoEnrollToken";
+			}
+
+		}
+
+		//Validation on Submission of Phone Nmber, to make sure Phone Number has not been registered or belong to someone else
 		if (nextPage == 4) {
 			deviceExistDuoValidator.validate(duoperson, result);
 			if (result.hasErrors()) {
@@ -117,6 +132,7 @@ public class DuoEnrollController {
 			}
 		}
 
+		//Check on Activation Status on DUO Mobile App, don't let user move on until confirm the device has been activated
 		if (nextPage == 5) {
 			String activeStatus;
 			activeStatus = duoPhoneService.getObjStatusById(duoperson.getPhone_id());
@@ -136,33 +152,8 @@ public class DuoEnrollController {
 			return "DuoEnrollSuccess";
 		}
 
+		//Traverse Multipage Form, DuoEnrollStep*.jsp
 		return "DuoEnrollStep" + nextPage;
-	}
-
-	@RequestMapping(method = RequestMethod.POST, params = "AddUser")
-	public String processSubmit(
-			@ModelAttribute("DuoPerson") DuoPersonObj duoperson,
-			BindingResult result, SessionStatus status, ModelMap model) throws UnsupportedEncodingException, Exception {
-
-
-
-		if (duoperson.getChoosenDevice() != null && !duoperson.getChoosenDevice().isEmpty() && !duoperson.getChoosenDevice().matches("landline|token")) {
-			jresult = duoadminfunc.DuoEnrollUser(this.duoallikeys, "EnrollUser", duoperson.getUsername());
-			model.addAttribute("barcode", jresult.getString("activation_barcode"));
-		}
-
-
-
-		userresult = duoadminfunc.duosearchuser(this.duoallikeys, "RetrUsers", duoperson.getUsername());
-
-		for (int i = 0; i < userresult.length(); i++) {
-			model.addAttribute("userinfo", userresult.getJSONObject(i));
-		}
-
-
-
-		return "DuoEnrollSuccess";
-
 	}
 
 	@RequestMapping(method = RequestMethod.POST, params = "sendsms")
@@ -184,97 +175,107 @@ public class DuoEnrollController {
 			@ModelAttribute("DuoPerson") DuoPersonObj duoperson,
 			BindingResult result, SessionStatus status, ModelMap model) throws UnsupportedEncodingException, Exception {
 
-
-
-		//if (duoperson.getChoosenDevice()!= null && !duoperson.getChoosenDevice().isEmpty() && !duoperson.getChoosenDevice().matches("landline|token"))
 		String phoneId;
 		String userId;
 		String qrCode;
 
+		//Register First-Time User into DUO Database
+		if (duoperson.getUser_id() == null) {
+			userId = duoUsrService.createObjByParam(duoperson.getUsername(), duoperson.getFullName(), duoperson.getEmail(), null);
+			duoperson.setUser_id(userId);
+			logger.info("Duo User Account created: " + duoperson.getUsername());
+			logger.info("Duo userID: " + duoperson.getUser_id());
+		}
+
+		/**
+		 * Enrollment Procedure for Type == Mobile | Tablet 1st) Create the
+		 * Phone/Tablet Device first in DUO DB 2nd) Link the newly create
+		 * Phone/Tablet to the user 3rd) Generate and Display the Activation QR
+		 * code for DUO Mobile App Registration
+		 */
 		if (duoperson.getChoosenDevice().matches("mobile|tablet")) {
-
-			if (duoperson.getUser_id() == null) {
-				userId = duoUsrService.createObjByParam(duoperson.getUsername(), null, null);
-				duoperson.setUser_id(userId);
-				logger.info("Duo User Account created: " + duoperson.getUsername());
-				logger.info("Duo userID: " + duoperson.getUser_id());
-			}
-
-			phoneId = duoPhoneService.createObjByParam(duoperson.getPhonenumber(), duoperson.getChoosenDevice(), duoperson.getDeviceOS());
+			logger.info(duoperson.getChoosenDevice() + ' ' + duoperson.getDeviceOS() + ' ' + duoperson.getTabletName());
+			phoneId = duoPhoneService.createObjByParam(duoperson.getPhonenumber(), duoperson.getChoosenDevice(), duoperson.getDeviceOS(), duoperson.getTabletName());
 			duoperson.setPhone_id(phoneId);
 			logger.info("Duo Phone Device created: " + duoperson.getPhonenumber());
 			logger.info("Duo deviceID: " + duoperson.getPhone_id());
 
-			duoUsrService.associateObjs(duoperson.getUser_id(), duoperson.getPhone_id());
-			logger.info("Successfully Linked Device to User account");
+			duoPhoneService.associateObjs(duoperson.getUser_id(), duoperson.getPhone_id());
 
 			qrCode = duoPhoneService.objActionById(duoperson.getPhone_id(), "qrCode");
 			duoperson.setQRcode(qrCode);
-			logger.info("Activation QR Code generated");
-
 
 			return "DuoActivationQR";
 		}
 
+		/**
+		 * Enrollment Procedure for Type == Token 1st) Validate against the
+		 * database to see whether Token has been register by somebody else ||
+		 * Token Existence in DB
+		 */
+		if (duoperson.getChoosenDevice().matches("token")) {
+			logger.info("Duo Token Type:" + duoperson.getTokenType());
+			logger.info("Duo Token Serial Number:" + duoperson.getTokenSerial());
+
+			deviceExistDuoValidator.validate(duoperson, result);
+			if (result.hasErrors()) {
+				return "DuoEnrollToken";
+			}
+			////////////
+			////////Need to Get the Token ID First!!!!!!
+			/////// Then duoTokenService.associateObjs
+			////////////
+
+		}
+
 
 		userresult = duoadminfunc.duosearchuser(this.duoallikeys, "RetrUsers", duoperson.getUsername());
-
 		for (int i = 0; i < userresult.length(); i++) {
 			model.addAttribute("userinfo", userresult.getJSONObject(i));
 		}
-
 		return "DuoEnrollSuccess";
 
 	}
-//	@ModelAttribute("webFrameworkList")
-//	public List<String> populateWebFrameworkList() {
-//		
-//		//Data referencing for web framework checkboxes
-//		List<String> webFrameworkList = new ArrayList<String>();
-//		webFrameworkList.add("Spring MVC");
-//		webFrameworkList.add("Struts 1");
-//		webFrameworkList.add("Struts 2");
-//		webFrameworkList.add("JSF");
-//		webFrameworkList.add("Apache Wicket");
-//		
-//		return webFrameworkList;
-//	}
-//	@ModelAttribute("devices")
-//	public List<String> populateDeviceList() {
-//		
-//		//Data referencing for number radiobuttons
-//		List<String> devices = new ArrayList<>();
-//		devices.add("Mobile phone RECOMMENDED");
-//		devices.add("Tablet (iPad, Nexus 7, etc.)");
-//		devices.add("Landline");
-//		devices.add("Token");
-//		
-//		return devices;
-//	}
-//	
-//	@ModelAttribute("javaSkillsList")
-//	public Map<String,String> populateJavaSkillList() {
-//		
-//		//Data referencing for java skills list box
-//		Map<String,String> javaSkill = new LinkedHashMap<String,String>();
-//		javaSkill.put("Hibernate", "Hibernate");
-//		javaSkill.put("Spring", "Spring");
-//		javaSkill.put("Apache Wicket", "Apache Wicket");
-//		javaSkill.put("Struts", "Struts");
-//		
-//		return javaSkill;
-//	}
+
+	@ModelAttribute("tokenTypeList")
+	public Map<String, String> populateTokenTypeList() {
+
+		Map<String, String> tokenType = new LinkedHashMap<>();
+		tokenType.put("d1", "Duo-D100 hardware token");
+		tokenType.put("yk", "YubiKey AES hardware token");
+		tokenType.put("h6", "HOTP-6 hardware token");
+		tokenType.put("h8", "HOTP-8 hardware token");
+		tokenType.put("t6", "TOTP-6 hardware token");
+		tokenType.put("t8", "TOTP-8 hardware token");
+
+		return tokenType;
+	}
+
+	@ModelAttribute("tabletOSList")
+	public Map<String, String> populateTabletOSList() {
+
+		Map<String, String> tabletOS = new LinkedHashMap<>();
+		tabletOS.put("apple ios", "Apple IOS");
+		tabletOS.put("google android", "Google Android");
+		tabletOS.put("windows phone", "Microsoft Windows for Surface");
+
+		return tabletOS;
+	}
+//	@RequestMapping(method = RequestMethod.POST, params = "AddUser")
+//	public String processSubmit(
+//			@ModelAttribute("DuoPerson") DuoPersonObj duoperson,
+//			BindingResult result, SessionStatus status, ModelMap model) throws UnsupportedEncodingException, Exception {
 //
-//	@ModelAttribute("countryList")
-//	public Map<String,String> populateCountryList() {
-//		
-//		//Data referencing for java skills list box
-//		Map<String,String> country = new LinkedHashMap<String,String>();
-//		country.put("US", "United Stated");
-//		country.put("CHINA", "China");
-//		country.put("SG", "Singapore");
-//		country.put("MY", "Malaysia");
-//		
-//		return country;
+//		if (duoperson.getChoosenDevice() != null && !duoperson.getChoosenDevice().isEmpty() && !duoperson.getChoosenDevice().matches("landline|token")) {
+//			jresult = duoadminfunc.DuoEnrollUser(this.duoallikeys, "EnrollUser", duoperson.getUsername());
+//			model.addAttribute("barcode", jresult.getString("activation_barcode"));
+//		}
+//
+//		userresult = duoadminfunc.duosearchuser(this.duoallikeys, "RetrUsers", duoperson.getUsername());
+//
+//		for (int i = 0; i < userresult.length(); i++) {
+//			model.addAttribute("userinfo", userresult.getJSONObject(i));
+//		}
+//		return "DuoEnrollSuccess";
 //	}
 }

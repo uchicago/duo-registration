@@ -15,6 +15,14 @@
 					<td><form:label path="username">UserName</form:label></td>
 					<td><form:input path="username" /></td>
 				</tr>
+				<tr>
+					<td><form:label path="fullName">Full Name</form:label></td>
+					<td><form:input path="fullName" /></td>
+				</tr>
+				<tr>
+					<td><form:label path="email">Email Address</form:label></td>
+					<td><form:input path="email" /></td>
+				</tr>
 			</table>
 			<input type="submit" value="Next" name="enrollsteps"/>
 			<input type="hidden" name="_page" value="2" />

@@ -17,6 +17,9 @@ public class DeviceExistDuoValidator implements Validator {
 
 	@Autowired
 	private DuoObjInterface duoPhoneService;
+	
+	@Autowired
+	private DuoObjInterface duoTokenService;
 
 	@Override
 	public boolean supports(Class clazz) {
@@ -26,14 +29,28 @@ public class DeviceExistDuoValidator implements Validator {
 	@Override
 	public void validate(Object target, Errors errors) {
 		DuoPersonObj duoPersonObj = (DuoPersonObj) target;
-
+		String userName;
+		
 		if (duoPersonObj.getChoosenDevice().matches("mobile|landline")) {
-			String userName = duoPhoneService.getObjByParam(duoPersonObj.getPhonenumber(), null);
+			userName = duoPhoneService.getObjByParam(duoPersonObj.getPhonenumber(), null, "username");
 			if (userName != null && userName.equals(duoPersonObj.getUsername())) {
 				errors.rejectValue("phonenumber", "DeviceExistDuoValidator.alreadyReg");
 			}else if (userName != null) {
 				errors.rejectValue("phonenumber", "DeviceExistDuoValidator.belongSomeoneElse");
 			}
 		}
+		
+		if (duoPersonObj.getChoosenDevice().matches("token")) {
+			userName = duoTokenService.getObjByParam(duoPersonObj.getTokenSerial(), duoPersonObj.getTokenType(), "username");
+			if (userName != null && userName.equals(duoPersonObj.getUsername())) {
+				errors.rejectValue("tokenSerial", "DeviceExistDuoValidator.alreadyReg");
+			}else if (userName != null) {
+				errors.rejectValue("tokenSerial", "DeviceExistDuoValidator.belongSomeoneElse");
+			}else if (userName == null) {
+				errors.rejectValue("tokenSerial", "DeviceExistDuoValidator.deviceNotInDB");
+			}
+		}
+		
+		
 	}
 }

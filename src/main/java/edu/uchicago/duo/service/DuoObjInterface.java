@@ -11,9 +11,9 @@ public interface DuoObjInterface {
 	
 	public String getObjStatusById (String param1);
 	
-	public String getObjByParam (String param1, String param2);
+	public String getObjByParam (String param1, String param2, String attribute);
 	
-	public String createObjByParam (String param1, String param2, String param3);
+	public String createObjByParam (String param1, String param2, String param3, String param4);
 	
 	public void associateObjs (String param1, String param2);
 	
