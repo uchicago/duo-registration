@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	   xmlns:p="http://www.springframework.org/schema/p"
+	   xmlns:context="http://www.springframework.org/schema/context"
+	   xmlns:mvc="http://www.springframework.org/schema/mvc"
+	   xmlns:aop="http://www.springframework.org/schema/aop"
+	   xmlns:tx="http://www.springframework.org/schema/tx"
+	   xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.1.xsd
+       http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-3.1.xsd
+       http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-3.1.xsd
+	   http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-2.5.xsd
+	   http://www.springframework.org/schema/mvc http://www.springframework.org/schema/mvc/spring-mvc-3.0.xsd">
+
+	<context:annotation-config/>
+	<mvc:annotation-driven />
+		
+	<bean id="duoallintegrationkeys" class="edu.uchicago.duo.domain.DuoAllIntegrationKeys">
+		<property name="authikeys" ref="duoauthISkeys" />
+		<property name="adminikeys" ref="duoadminISkeys" />
+		<property name="verifyikeys" ref="duoverifyISkeys" />
+	</bean> 
+	
+	<bean id="duohostkey" class="edu.uchicago.duo.domain.DuoISHkeys">
+		<property name="hostkey" value="${duo.hkey}" />
+	</bean>
+	
+	<bean id="duoadminISkeys" class="edu.uchicago.duo.domain.DuoISHkeys" parent="duohostkey">
+		<property name="ikey" value="${duo.admin.ikey}" />
+		<property name="skey" value="${duo.admin.skey}" />
+	</bean>
+	
+	<bean id="duoauthISkeys" class="edu.uchicago.duo.domain.DuoISHkeys" parent="duohostkey">
+		<property name="ikey" value="${duo.auth.ikey}" />
+		<property name="skey" value="${duo.auth.skey}" />
+	</bean>
+	
+	<bean id="duoverifyISkeys" class="edu.uchicago.duo.domain.DuoISHkeys" parent="duohostkey">
+		<property name="ikey" value="${duo.verify.ikey}" />
+		<property name="skey" value="${duo.verify.skey}" />
+	</bean>
+	
+	<bean class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+		<property name="locations" value="classpath:DuoKeys.properties"/> 
+	</bean>
+	
+	<bean id="messageSource" class="org.springframework.context.support.ResourceBundleMessageSource">
+		<property name="basename" value="messages"/>
+	</bean>    
+	
+	
+<!--bean id="propertyConfigurer"
+          class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer"
+          p:location="/WEB-INF/jdbc.properties" />
+
+	<bean id="dataSource"
+	class="org.springframework.jdbc.datasource.DriverManagerDataSource"
+	p:driverClassName="${jdbc.driverClassName}"
+	p:url="${jdbc.url}"
+	p:username="${jdbc.username}"
+	p:password="${jdbc.password}" /-->
+
+	<!-- ADD PERSISTENCE SUPPORT HERE (jpa, hibernate, etc) -->
+
+</beans>
