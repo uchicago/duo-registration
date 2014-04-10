@@ -29,6 +29,13 @@
 		<spring:url value="/enrollment" var="enroll" />
 		<a href="${enroll}">Duo Enrollment Portal(Spring Tag)</a>
 		
+		<br><br>
+		
+		<spring:url value="/devicemgmt" var="devicemgmt" />
+		<a href="${devicemgmt}">Duo Device Management Console</a>
+		
+		
+		
 
 
 </body>

@@ -17,6 +17,8 @@
 	<context:component-scan base-package="edu.uchicago.duo.*" />
 	<mvc:annotation-driven />
 	
+	<mvc:resources mapping="/resources/**" location="/resources/" />
+	
 	<!--
 	Most controllers will use the ControllerClassNameHandlerMapping above, but
 	for the index controller we are using ParameterizableViewController, so we must

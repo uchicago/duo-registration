@@ -5,7 +5,10 @@ package edu.uchicago.duo.service;
 
 import com.duosecurity.client.Http;
 import edu.uchicago.duo.domain.DuoAllIntegrationKeys;
+import edu.uchicago.duo.domain.DuoPhone;
 import edu.uchicago.duo.web.DuoEnrollController;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 import org.apache.log4j.Logger;
 import org.json.JSONArray;
@@ -58,7 +61,7 @@ public class DuoPhoneObjImpl implements DuoObjInterface {
 		return returnObj;
 
 	}
-
+	
 	@Override
 	public String createObjByParam(String phoneNumber, String device, String deviceOS, String tabletName) {
 		String phoneID = null;
@@ -177,6 +180,57 @@ public class DuoPhoneObjImpl implements DuoObjInterface {
 
 		return actionResult;
 
+	}
+	
+	/**
+	 * Why use UserId instead of UserName??
+	 * 1)UserId always SINGLE record, althought Username search should only have one record also...
+	 * 2)The JSON Reponse code for userid search is either success or User not found, easier to capture the exception?
+	 */
+		
+	@Override
+	public List<DuoPhone> getAllPhones(String userId) {
+		apiURL = new String();
+		apiURL = duoUserApi + "/" + userId;
+		request = genHttpRequest("GET", apiURL);
+		request = signHttpRequest();
+		
+		jResults = null;
+		
+		DuoPhone duoPhone;
+		JSONArray jPhones;
+		List<DuoPhone> phones = new ArrayList<>();
+		
+		
+		try {
+			jResult = (JSONObject) request.executeRequest();
+			jPhones = jResult.getJSONArray("phones");
+			logger.info("Total Number of Phones "+userId+" has:"+jPhones.length());
+			for (int p = 0; p < jPhones.length(); p++) {
+				duoPhone = new DuoPhone();
+				duoPhone.setId(jPhones.getJSONObject(p).getString("phone_id"));
+				duoPhone.setPhoneNumber(jPhones.getJSONObject(p).getString("number"));
+				duoPhone.setPlatform(jPhones.getJSONObject(p).getString("platform"));
+				duoPhone.setType(jPhones.getJSONObject(p).getString("type"));
+				duoPhone.setActivationStatus(jPhones.getJSONObject(p).getBoolean("activated"));
+				duoPhone.setSmsPassCodeSent(jPhones.getJSONObject(p).getBoolean("sms_passcodes_sent"));
+				
+				String capabilities = jPhones.getJSONObject(p).getJSONArray("capabilities").toString();
+				if (capabilities.toLowerCase().contains("push")) {duoPhone.setCapablePush(true);}
+				if (capabilities.toLowerCase().contains("sms")) {duoPhone.setCapableSMS(true);}
+				if (capabilities.toLowerCase().contains("phone")) {duoPhone.setCapablePhone(true);}
+				
+				phones.add(duoPhone);
+				
+			}
+			
+		} catch (Exception ex) {
+			logger.error("Unable to Excute Method 'GetAllPhones'");
+			logger.error("The Error is(PhoneObjImp): " + ex.toString());
+		}
+
+		return phones;
+	
 	}
 
 	private Http genHttpRequest(String getOrPost, String apiURL) {

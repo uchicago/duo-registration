@@ -5,6 +5,9 @@
 
 package edu.uchicago.duo.service;
 
+import edu.uchicago.duo.domain.DuoPhone;
+import java.util.List;
+
 public interface DuoObjInterface {
 	
 	public String getObjById ();
@@ -18,5 +21,7 @@ public interface DuoObjInterface {
 	public void associateObjs (String param1, String param2);
 	
 	public String objActionById (String param1, String param2);
+	
+	public List<DuoPhone> getAllPhones (String param1);
 	
 }

@@ -5,7 +5,9 @@ package edu.uchicago.duo.service;
 
 import com.duosecurity.client.Http;
 import edu.uchicago.duo.domain.DuoAllIntegrationKeys;
+import edu.uchicago.duo.domain.DuoPhone;
 import edu.uchicago.duo.web.DuoEnrollController;
+import java.util.List;
 import org.apache.log4j.Logger;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -149,6 +151,11 @@ public class DuoUsrObjImpl implements DuoObjInterface {
 
 	@Override
 	public void associateObjs(String param1, String param2) {
+		throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+	}
+
+	@Override
+	public List<DuoPhone> getAllPhones(String param1) {
 		throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
 	}
 }

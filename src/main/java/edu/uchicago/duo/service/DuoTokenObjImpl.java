@@ -5,7 +5,9 @@ package edu.uchicago.duo.service;
 
 import com.duosecurity.client.Http;
 import edu.uchicago.duo.domain.DuoAllIntegrationKeys;
+import edu.uchicago.duo.domain.DuoPhone;
 import edu.uchicago.duo.web.DuoEnrollController;
+import java.util.List;
 import java.util.Locale;
 import org.apache.log4j.Logger;
 import org.json.JSONArray;
@@ -102,5 +104,10 @@ public class DuoTokenObjImpl implements DuoObjInterface {
 		}
 
 		return request;
+	}
+
+	@Override
+	public List<DuoPhone> getAllPhones(String param1) {
+		throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
 	}
 }

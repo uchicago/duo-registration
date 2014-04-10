@@ -4,7 +4,7 @@
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
 <!DOCTYPE html>
 <html>
-    <head>
+	<head>
         <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
         <title>Duo Enrollment</title>
     </head>
@@ -14,7 +14,7 @@
 		<c:if test="${existingUser}">
 			<h1><spring:message code = "UserExist" /></h1>
 		</c:if>
-		
+
 		<form:form method="post" commandName="DuoPerson">
 			<table>
 				<tr>
@@ -37,9 +37,9 @@
 						<td>Token</td>  
 						<td><form:radiobutton path="choosenDevice" value="token"></form:radiobutton></td>  
 					</tr>
-				</table>
-				<input type="submit" value="Next" name="enrollsteps"/>
-				<input type="hidden" name="_page" value="3" />
+			</table>
+			<input type="submit" value="Next" name="enrollsteps"/>
+			<input type="hidden" name="_page" value="3" />
 		</form:form>
     </body>
 </html>

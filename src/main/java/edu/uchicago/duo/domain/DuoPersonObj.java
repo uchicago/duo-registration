@@ -4,6 +4,8 @@
 package edu.uchicago.duo.domain;
 
 import edu.uchicago.duo.validator.PhoneConstraint;
+import java.util.ArrayList;
+import java.util.List;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
 import org.hibernate.validator.constraints.Length;
@@ -31,7 +33,16 @@ public class DuoPersonObj {
 	String tokenType;
 	String tokenSerial;
 	String tabletName;
+	
+	List<DuoPhone> phones = new ArrayList<>();
 
+	public List<DuoPhone> getPhones() {
+		return phones;
+	}
+
+	public void setPhones(List<DuoPhone> phones) {
+		this.phones = phones;
+	}
 	
 	public String getFullName() {
 		return fullName;

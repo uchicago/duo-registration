@@ -57,10 +57,10 @@ public class DuoController {
 
 		Map<String, Object> myModel = new HashMap<String, Object>();
 		
-//		name = principal.getName();
+		name = principal.getName();
 //		myModel.put("username", name);
 		
-//		session.setAttribute("username", name);
+		session.setAttribute("username", name);
 //		HttpSession.setAttribute();
 
 		//Make "Spring MVC" as default checked value

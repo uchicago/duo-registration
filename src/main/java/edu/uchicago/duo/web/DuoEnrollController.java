@@ -94,7 +94,7 @@ public class DuoEnrollController {
 	@RequestMapping(method = RequestMethod.POST, params = "enrollsteps")
 	public String processPage(@RequestParam("_page") final int nextPage,
 			@Valid @ModelAttribute("DuoPerson") DuoPersonObj duoperson,
-			BindingResult result, SessionStatus status, ModelMap model) throws UnsupportedEncodingException, JSONException, Exception {
+			BindingResult result, HttpSession session, SessionStatus status, ModelMap model) throws UnsupportedEncodingException, JSONException, Exception {
 
 		//Redirect for Enroll Another Device
 		if (nextPage == 0) {
@@ -103,10 +103,15 @@ public class DuoEnrollController {
 		}
 
 		if (nextPage == 2) {
+			//Session Attribute "Username" - UPDATED
+			session.setAttribute("username", duoperson.getUsername());
+
 			String userId = duoUsrService.getObjByParam(duoperson.getUsername(), null, "userId");
 			duoperson.setUser_id(userId);
 
 			if (userId != null) {
+				//Session Attribute "Duo User ID" - UPDATED (Depends)
+				session.setAttribute("duoUserId", userId);
 				model.put("existingUser", true);
 			}
 		}
@@ -173,7 +178,7 @@ public class DuoEnrollController {
 	@RequestMapping(method = RequestMethod.POST, params = "enrollUserNPhone")
 	public String processEnroll(
 			@ModelAttribute("DuoPerson") DuoPersonObj duoperson,
-			BindingResult result, SessionStatus status, ModelMap model) throws UnsupportedEncodingException, Exception {
+			BindingResult result, HttpSession session, SessionStatus status, ModelMap model) throws UnsupportedEncodingException, Exception {
 
 		String phoneId;
 		String userId;
@@ -183,6 +188,10 @@ public class DuoEnrollController {
 		if (duoperson.getUser_id() == null) {
 			userId = duoUsrService.createObjByParam(duoperson.getUsername(), duoperson.getFullName(), duoperson.getEmail(), null);
 			duoperson.setUser_id(userId);
+
+			//Session Attribute "Duo User ID" - ADDED
+			session.setAttribute("duoUserId", userId);
+
 			logger.info("Duo User Account created: " + duoperson.getUsername());
 			logger.info("Duo userID: " + duoperson.getUser_id());
 		}
