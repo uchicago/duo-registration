@@ -22,10 +22,9 @@ import java.util.List;
 import org.springframework.stereotype.Component;
 
 @Component
-public class DuoPhone {
-
+public class DuoTablet {
 	private String id;
-	private String phoneNumber;
+	private String deviceName;
 	private String platform;
 	private String type;
 	private int usersize;
@@ -35,31 +34,6 @@ public class DuoPhone {
 	private boolean capablePhone = false;
 	private boolean smsPassCodeSent = false;
 	private List<String> users;
-	
-
-	public int getUsersize() {
-		return usersize;
-	}
-
-	public void setUsersize(int usersize) {
-		this.usersize = usersize;
-	}
-
-	public List<String> getUsers() {
-		return users;
-	}
-
-	public void setUsers(List<String> users) {
-		this.users = users;
-	}
-
-	public boolean isActivationStatus() {
-		return activationStatus;
-	}
-
-	public void setActivationStatus(boolean activationStatus) {
-		this.activationStatus = activationStatus;
-	}
 
 	public String getId() {
 		return id;
@@ -69,12 +43,12 @@ public class DuoPhone {
 		this.id = id;
 	}
 
-	public String getPhoneNumber() {
-		return phoneNumber;
+	public String getDeviceName() {
+		return deviceName;
 	}
 
-	public void setPhoneNumber(String phoneNumber) {
-		this.phoneNumber = phoneNumber;
+	public void setDeviceName(String deviceName) {
+		this.deviceName = deviceName;
 	}
 
 	public String getPlatform() {
@@ -91,6 +65,22 @@ public class DuoPhone {
 
 	public void setType(String type) {
 		this.type = type;
+	}
+
+	public int getUsersize() {
+		return usersize;
+	}
+
+	public void setUsersize(int usersize) {
+		this.usersize = usersize;
+	}
+
+	public boolean isActivationStatus() {
+		return activationStatus;
+	}
+
+	public void setActivationStatus(boolean activationStatus) {
+		this.activationStatus = activationStatus;
 	}
 
 	public boolean isCapableSMS() {
@@ -124,5 +114,14 @@ public class DuoPhone {
 	public void setSmsPassCodeSent(boolean smsPassCodeSent) {
 		this.smsPassCodeSent = smsPassCodeSent;
 	}
+
+	public List<String> getUsers() {
+		return users;
+	}
+
+	public void setUsers(List<String> users) {
+		this.users = users;
+	}
+	
 	
 }

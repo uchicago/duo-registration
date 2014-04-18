@@ -1,5 +1,19 @@
 /**
- * @author Daniel Yu, danielyu@uchicago.edu
+ * Copyright 2014 University of Chicago
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
+ *
+ * Author: Daniel Yu <danielyu@uchicago.edu>
  */
 package edu.uchicago.duo.web;
 
@@ -53,6 +67,9 @@ public class DuoEnrollController {
 	///
 	@Autowired
 	private DuoObjInterface duoUsrService;
+	///
+	@Autowired
+	private DuoObjInterface duoTokenService;
 	///
 	@Autowired
 	private DeviceExistDuoValidator deviceExistDuoValidator;
@@ -122,7 +139,6 @@ public class DuoEnrollController {
 				case "tablet":
 					duoperson.setDeviceOS(null);
 					return "DuoEnrollTablet";
-//					return "DuoEnrollStep4";
 				case "token":
 					return "DuoEnrollToken";
 			}
@@ -135,6 +151,11 @@ public class DuoEnrollController {
 			if (result.hasErrors()) {
 				return "DuoEnrollStep3";
 			}
+
+			if (duoperson.getChoosenDevice().equals("landline")) {
+				return processEnroll(duoperson, result, session, status, model);
+			}
+
 		}
 
 		//Check on Activation Status on DUO Mobile App, don't let user move on until confirm the device has been activated
@@ -181,6 +202,7 @@ public class DuoEnrollController {
 			BindingResult result, HttpSession session, SessionStatus status, ModelMap model) throws UnsupportedEncodingException, Exception {
 
 		String phoneId;
+		String tokenId;
 		String userId;
 		String qrCode;
 
@@ -197,25 +219,36 @@ public class DuoEnrollController {
 		}
 
 		/**
-		 * Enrollment Procedure for Type == Mobile | Tablet 1st) Create the
-		 * Phone/Tablet Device first in DUO DB 2nd) Link the newly create
-		 * Phone/Tablet to the user 3rd) Generate and Display the Activation QR
-		 * code for DUO Mobile App Registration
+		 * Enrollment Procedure for Type == Mobile | Tablet 
+		 * 1st) Create the Phone/Tablet Device first in DUO DB 
+		 * 
+		 * 2nd) Link the newly create Phone/Tablet to the user 
+		 * 
+		 * 3rd) Generate and Display the Activation QR code for DUO Mobile App Registration
 		 */
 		if (duoperson.getChoosenDevice().matches("mobile|tablet")) {
 			logger.info(duoperson.getChoosenDevice() + ' ' + duoperson.getDeviceOS() + ' ' + duoperson.getTabletName());
 			phoneId = duoPhoneService.createObjByParam(duoperson.getPhonenumber(), duoperson.getChoosenDevice(), duoperson.getDeviceOS(), duoperson.getTabletName());
 			duoperson.setPhone_id(phoneId);
-			logger.info("Duo Phone Device created: " + duoperson.getPhonenumber());
-			logger.info("Duo deviceID: " + duoperson.getPhone_id());
+//			logger.info("Duo Phone Device created: " + duoperson.getPhonenumber());
+//			logger.info("Duo deviceID: " + duoperson.getPhone_id());
 
-			duoPhoneService.associateObjs(duoperson.getUser_id(), duoperson.getPhone_id());
+			duoPhoneService.associateObjs(duoperson.getUser_id(), phoneId);
 
 			qrCode = duoPhoneService.objActionById(duoperson.getPhone_id(), "qrCode");
 			duoperson.setQRcode(qrCode);
 
 			return "DuoActivationQR";
 		}
+
+		if (duoperson.getChoosenDevice().matches("landline")) {
+			logger.info(duoperson.getChoosenDevice() + ' ' + duoperson.getDeviceOS() + ' ' + duoperson.getTabletName());
+			phoneId = duoPhoneService.createObjByParam(duoperson.getPhonenumber(), duoperson.getChoosenDevice(), null, null);
+			duoperson.setPhone_id(phoneId);
+
+			duoPhoneService.associateObjs(duoperson.getUser_id(), phoneId);
+		}
+
 
 		/**
 		 * Enrollment Procedure for Type == Token 1st) Validate against the
@@ -230,11 +263,9 @@ public class DuoEnrollController {
 			if (result.hasErrors()) {
 				return "DuoEnrollToken";
 			}
-			////////////
-			////////Need to Get the Token ID First!!!!!!
-			/////// Then duoTokenService.associateObjs
-			////////////
-
+			tokenId = duoTokenService.getObjByParam(duoperson.getTokenSerial(), duoperson.getTokenType(), "tokenId");
+			duoperson.setTokenId(tokenId);
+			duoTokenService.associateObjs(duoperson.getUser_id(), tokenId);
 		}
 
 

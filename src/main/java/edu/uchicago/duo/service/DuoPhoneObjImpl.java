@@ -1,11 +1,27 @@
 /**
- * @author Daniel Yu, danielyu@uchicago.edu
+ * Copyright 2014 University of Chicago
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
+ *
+ * Author: Daniel Yu <danielyu@uchicago.edu>
  */
 package edu.uchicago.duo.service;
 
 import com.duosecurity.client.Http;
 import edu.uchicago.duo.domain.DuoAllIntegrationKeys;
 import edu.uchicago.duo.domain.DuoPhone;
+import edu.uchicago.duo.domain.DuoTablet;
+import edu.uchicago.duo.domain.DuoToken;
 import edu.uchicago.duo.web.DuoEnrollController;
 import java.util.ArrayList;
 import java.util.List;
@@ -61,7 +77,7 @@ public class DuoPhoneObjImpl implements DuoObjInterface {
 		return returnObj;
 
 	}
-	
+
 	@Override
 	public String createObjByParam(String phoneNumber, String device, String deviceOS, String tabletName) {
 		String phoneID = null;
@@ -78,6 +94,11 @@ public class DuoPhoneObjImpl implements DuoObjInterface {
 			request.addParam("platform", deviceOS);
 			request.addParam("name", tabletName);
 		}
+		
+		if (device.equals("landline")) {
+			request.addParam("number", phoneNumber);
+			request.addParam("type", "landline");
+		}
 
 
 		request = signHttpRequest();
@@ -85,7 +106,10 @@ public class DuoPhoneObjImpl implements DuoObjInterface {
 		try {
 			jResult = (JSONObject) request.executeRequest();
 			phoneID = jResult.getString("phone_id");
+			logger.info("Successfully Created Phone, Type:"+device+"/Number:"+phoneNumber);
 		} catch (Exception ex) {
+			logger.error("Unable to Create Duo Phone Object!!!!, Number:"+phoneNumber);
+			logger.error("The Error is(PhoneObjImp): " + ex.toString());
 		}
 
 		return phoneID;
@@ -113,12 +137,12 @@ public class DuoPhoneObjImpl implements DuoObjInterface {
 
 		return status;
 	}
-	
+
 	@Override
 	public void associateObjs(String userId, String phoneId) {
 		apiURL = new String();
 		apiURL = duoUserApi + "/" + userId + "/phones";
-		
+
 		request = genHttpRequest("POST", apiURL);
 		request.addParam("phone_id", phoneId);
 		request = signHttpRequest();
@@ -130,7 +154,7 @@ public class DuoPhoneObjImpl implements DuoObjInterface {
 			logger.error("Unable to Link Phone/Tablet to User account!!!!");
 			logger.error("The Error is(PhoneObjImp): " + ex.toString());
 		}
-		
+
 	}
 
 	@Override
@@ -165,74 +189,120 @@ public class DuoPhoneObjImpl implements DuoObjInterface {
 		request = signHttpRequest();
 
 		try {
-			jResult = (JSONObject) request.executeRequest();
-
+			
 			switch (action) {
+				case "activationSMS":
+					jResult = (JSONObject) request.executeRequest();
+					actionResult = null;
+					logger.info("Activation SMS sent");
+					break;				
 				case "qrCode":
+					jResult = (JSONObject) request.executeRequest();
 					actionResult = jResult.getString("activation_barcode");
 					logger.info("Activation QR Code generated");
 					break;
+				case "passcodeSMS":
+					actionResult = (String)request.executeRequest();
+					logger.info("SMS Passcode Sent Successfully");
+					break;
 			}
 		} catch (Exception ex) {
-			logger.error("Object Action Failed for: "+action);
+			logger.error("Object Action Failed for: " + action);
 			logger.error("The Error is(PhoneObjImp): " + ex.toString());
 		}
 
 		return actionResult;
 
 	}
-	
+
 	/**
 	 * Why use UserId instead of UserName??
-	 * 1)UserId always SINGLE record, althought Username search should only have one record also...
-	 * 2)The JSON Reponse code for userid search is either success or User not found, easier to capture the exception?
+	 *
+	 * 1)UserId always SINGLE record, although Username search should only have
+	 * one record also...
+	 *
+	 * 2)The JSON Response code for userID search is either success or User not
+	 * found, easier to capture the exception?
+	 *
+	 * 3)Return a JSON object instead of JSON Array, safe one layer of parsing
 	 */
-		
 	@Override
 	public List<DuoPhone> getAllPhones(String userId) {
 		apiURL = new String();
 		apiURL = duoUserApi + "/" + userId;
 		request = genHttpRequest("GET", apiURL);
 		request = signHttpRequest();
-		
+
 		jResults = null;
-		
+
 		DuoPhone duoPhone;
 		JSONArray jPhones;
 		List<DuoPhone> phones = new ArrayList<>();
-		
-		
+		String phoneNumber;
+		int counter = 0;
+
+
 		try {
 			jResult = (JSONObject) request.executeRequest();
 			jPhones = jResult.getJSONArray("phones");
-			logger.info("Total Number of Phones "+userId+" has:"+jPhones.length());
+
 			for (int p = 0; p < jPhones.length(); p++) {
-				duoPhone = new DuoPhone();
-				duoPhone.setId(jPhones.getJSONObject(p).getString("phone_id"));
-				duoPhone.setPhoneNumber(jPhones.getJSONObject(p).getString("number"));
-				duoPhone.setPlatform(jPhones.getJSONObject(p).getString("platform"));
-				duoPhone.setType(jPhones.getJSONObject(p).getString("type"));
-				duoPhone.setActivationStatus(jPhones.getJSONObject(p).getBoolean("activated"));
-				duoPhone.setSmsPassCodeSent(jPhones.getJSONObject(p).getBoolean("sms_passcodes_sent"));
-				
-				String capabilities = jPhones.getJSONObject(p).getJSONArray("capabilities").toString();
-				if (capabilities.toLowerCase().contains("push")) {duoPhone.setCapablePush(true);}
-				if (capabilities.toLowerCase().contains("sms")) {duoPhone.setCapableSMS(true);}
-				if (capabilities.toLowerCase().contains("phone")) {duoPhone.setCapablePhone(true);}
-				
-				phones.add(duoPhone);
-				
+				phoneNumber = jPhones.getJSONObject(p).getString("number");
+				if (phoneNumber != null && !phoneNumber.isEmpty()) {
+
+					duoPhone = new DuoPhone();
+					duoPhone.setId(jPhones.getJSONObject(p).getString("phone_id"));
+					duoPhone.setPhoneNumber(jPhones.getJSONObject(p).getString("number"));
+					duoPhone.setPlatform(jPhones.getJSONObject(p).getString("platform"));
+					duoPhone.setType(jPhones.getJSONObject(p).getString("type"));
+					duoPhone.setActivationStatus(jPhones.getJSONObject(p).getBoolean("activated"));
+					duoPhone.setSmsPassCodeSent(jPhones.getJSONObject(p).getBoolean("sms_passcodes_sent"));
+
+					String capabilities = jPhones.getJSONObject(p).getJSONArray("capabilities").toString();
+					if (capabilities.toLowerCase().contains("push")) {
+						duoPhone.setCapablePush(true);
+					}
+					if (capabilities.toLowerCase().contains("sms")) {
+						duoPhone.setCapableSMS(true);
+					}
+					if (capabilities.toLowerCase().contains("phone")) {
+						duoPhone.setCapablePhone(true);
+					}
+
+					phones.add(duoPhone);
+					counter++;
+				}
+
 			}
-			
+
 		} catch (Exception ex) {
 			logger.error("Unable to Excute Method 'GetAllPhones'");
 			logger.error("The Error is(PhoneObjImp): " + ex.toString());
 		}
 
+		logger.info("Total Number of Phones(DuoPhoneImp) " + userId + " has:" + counter);
 		return phones;
-	
+
 	}
 
+	@Override
+	public void deleteObj(String phoneId, String na) {
+		apiURL = new String();
+		apiURL = duoPhoneApi + "/" + phoneId;
+
+		request = genHttpRequest("DELETE", apiURL);
+		request = signHttpRequest();
+
+		try {
+			request.executeRequest();
+			logger.info("Successfully Deleted phone, ID=" + phoneId);
+		} catch (Exception ex) {
+			logger.error("Unable to Delete Phone from Useraccount!!!");
+			logger.error("The Error is(PhoneObjImp): " + ex.toString());
+		}
+	}
+
+	//////////////////////////////////////////////////////////////////////////////////////////////////////////
 	private Http genHttpRequest(String getOrPost, String apiURL) {
 		request = null;
 		try {
@@ -261,5 +331,13 @@ public class DuoPhoneObjImpl implements DuoObjInterface {
 		throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
 	}
 
-	
+	@Override
+	public List<DuoTablet> getAllTablets(String param1) {
+		throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+	}
+
+	@Override
+	public List<DuoToken> getAllTokens(String param1) {
+		throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+	}
 }

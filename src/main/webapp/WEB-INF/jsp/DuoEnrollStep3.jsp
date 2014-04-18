@@ -1,3 +1,4 @@
+<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@taglib uri="http://www.springframework.org/tags/form" prefix="form"%>
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
 <!DOCTYPE html>
@@ -16,6 +17,14 @@
 					<td><form:input path="phonenumber" /></td>
 					<td><form:errors path="phonenumber" cssclass="error" /></td>
 				</tr>
+				<c:if test="${DuoPerson.choosenDevice == 'landline'}">
+					<tr>
+						<td><form:label path="landLineExtension">Extension</form:label></td>
+						<td><form:input path="landLineExtension" /></td>
+						<td><form:errors path="landLineExtension" cssclass="error" /></td>
+					</tr>
+				</c:if>
+
 			</table>
 			<input type="submit" value="Next" name="enrollsteps"/>
 			<input type="hidden" name="_page" value="4" />

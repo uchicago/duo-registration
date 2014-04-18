@@ -33,12 +33,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
 import org.springframework.stereotype.Service;
 
-@Service("duoTokenService")
-public class DuoTokenObjImpl implements DuoObjInterface {
-
+@Service("duoTabletService")
+public class DuoTabletObjImpl implements DuoObjInterface {
 	//get log4j handler
+
 	private static final Logger logger = Logger.getLogger(DuoEnrollController.class);
-	private static final String duoTokenApi = "/admin/v1/tokens";
+	private static final String duoPhoneApi = "/admin/v1/phones";
 	private static final String duoUserApi = "/admin/v1/users";
 	private String apiURL;
 	private Http request = null;
@@ -48,67 +48,6 @@ public class DuoTokenObjImpl implements DuoObjInterface {
 	private JSONArray jResults = null;
 	@Autowired
 	private MessageSource message;
-
-	@Override
-	public String getObjByParam(String tokenSerial, String tokenType, String attribute) {
-		String returnObj = null;
-		JSONArray users;
-
-		request = genHttpRequest("GET", duoTokenApi);
-		request.addParam("serial", tokenSerial);
-		request.addParam("type", tokenType);
-		request = signHttpRequest();
-
-		try {
-			jResults = (JSONArray) request.executeRequest();
-
-			switch (attribute) {
-				case "username":
-					if (jResults.getJSONObject(0).getJSONArray("users").length() > 0) {
-						users = jResults.getJSONObject(0).getJSONArray("users");
-						returnObj = "|";
-						for (int i = 0; i < users.length(); i++) {
-							returnObj += users.getJSONObject(i).getString("username") + "|";
-						}
-						logger.info("Token's Users Retrieved:" + returnObj);
-					}
-					break;
-				case "tokenId":
-					returnObj = jResults.getJSONObject(0).getString("token_id");
-					logger.info("Token's ID is:" + returnObj);
-					break;
-			}
-		} catch (Exception ex) {
-			if (jResults.length() == 0) {
-				logger.error("Token Not Exist!!!");
-			} else {
-				logger.error("Token Search Encounter a problem!!!!");
-			}
-			logger.error("The Error is: " + ex.toString());
-		}
-
-		return returnObj;
-	}
-
-	@Override
-	public void associateObjs(String userId, String tokenId) {
-
-		apiURL = new String();
-		apiURL = duoUserApi + "/" + userId + "/tokens";
-
-		request = genHttpRequest("POST", apiURL);
-		request.addParam("token_id", tokenId);
-		request = signHttpRequest();
-
-		try {
-			request.executeRequest();
-			logger.info("Successfully Linked Token to User account");
-		} catch (Exception ex) {
-			logger.error("Unable to Link Token to User account!!!!");
-			logger.error("The Error is(TokenObjImp): " + ex.toString());
-		}
-
-	}
 
 	/**
 	 * Why use UserId instead of UserName??
@@ -122,7 +61,7 @@ public class DuoTokenObjImpl implements DuoObjInterface {
 	 * 3)Return a JSON object instead of JSON Array, safe one layer of parsing
 	 */
 	@Override
-	public List<DuoToken> getAllTokens(String userId) {
+	public List<DuoTablet> getAllTablets(String userId) {
 		apiURL = new String();
 		apiURL = duoUserApi + "/" + userId;
 		request = genHttpRequest("GET", apiURL);
@@ -130,53 +69,77 @@ public class DuoTokenObjImpl implements DuoObjInterface {
 
 		jResults = null;
 
-		DuoToken duoToken;
-		JSONArray jTokens;
-		List<DuoToken> tokens = new ArrayList<>();
+		DuoTablet duoTablet;
+		JSONArray jTablets;
+		List<DuoTablet> tablets = new ArrayList<>();
+		String phoneNumber;
+		int counter = 0;
+
 
 		try {
 			jResult = (JSONObject) request.executeRequest();
-			jTokens = jResult.getJSONArray("tokens");
+			jTablets = jResult.getJSONArray("phones");
+			
+			for (int t = 0; t < jTablets.length(); t++) {
+				phoneNumber = jTablets.getJSONObject(t).getString("number");
+				if (phoneNumber == null || phoneNumber.isEmpty()) {
 
-			logger.info("Total Number of Tokens(DuoTokenImp) " + userId + " has:" + jTokens.length());
+					duoTablet = new DuoTablet();
+					duoTablet.setId(jTablets.getJSONObject(t).getString("phone_id"));
+					duoTablet.setDeviceName(jTablets.getJSONObject(t).getString("name"));
+					duoTablet.setPlatform(jTablets.getJSONObject(t).getString("platform"));
+					duoTablet.setType(jTablets.getJSONObject(t).getString("type"));
+					duoTablet.setActivationStatus(jTablets.getJSONObject(t).getBoolean("activated"));
+					duoTablet.setSmsPassCodeSent(jTablets.getJSONObject(t).getBoolean("sms_passcodes_sent"));
+					duoTablet.setActivationStatus(jTablets.getJSONObject(t).getBoolean("activated"));
+					duoTablet.setSmsPassCodeSent(jTablets.getJSONObject(t).getBoolean("sms_passcodes_sent"));
 
-			for (int t = 0; t < jTokens.length(); t++) {
+					String capabilities = jTablets.getJSONObject(t).getJSONArray("capabilities").toString();
+					if (capabilities.toLowerCase().contains("push")) {
+						duoTablet.setCapablePush(true);
+					}
+					if (capabilities.toLowerCase().contains("sms")) {
+						duoTablet.setCapableSMS(true);
+					}
+					if (capabilities.toLowerCase().contains("phone")) {
+						duoTablet.setCapablePhone(true);
+					}
 
-				duoToken = new DuoToken();
-				duoToken.setId(jTokens.getJSONObject(t).getString("token_id"));
-				duoToken.setType(jTokens.getJSONObject(t).getString("type"));
-				duoToken.setSerial(jTokens.getJSONObject(t).getString("serial"));
+					tablets.add(duoTablet);
+					counter++;
+				}
 
-				tokens.add(duoToken);
 			}
 
 		} catch (Exception ex) {
-			logger.error("Unable to Excute Method 'GetAllTokens'");
-			logger.error("The Error is(PhoneObjImp): " + ex.toString());
+			logger.error("Unable to Excute Method 'GetAllPhones'");
+			logger.error("The Error is(TabletObjImp): " + ex.toString());
 		}
+		
+		logger.info("Total Number of Tablets(TabletObjImp) " + userId + " has:" + counter);
+		return tablets;
 
-		return tokens;
 
 	}
 	
 	@Override
-	public void deleteObj(String tokenId, String userId) {
+	public void deleteObj(String tabletId, String na) {
 		apiURL = new String();
-		apiURL = duoUserApi + "/" + userId + "/tokens/" + tokenId;
+		apiURL = duoPhoneApi + "/" + tabletId;
 
 		request = genHttpRequest("DELETE", apiURL);
 		request = signHttpRequest();
 
 		try {
 			request.executeRequest();
-			logger.info("Successfully Disassociate Token, ID="+tokenId);
+			logger.info("Successfully Deleted Tablet, ID="+tabletId);
 		} catch (Exception ex) {
-			logger.error("Unable to Disassociate Token from Useraccount!!!");
-			logger.error("The Error is(TokenObjImp): " + ex.toString());
+			logger.error("Unable to Delete Tablet from Useraccount!!!");
+			logger.error("The Error is(TabletObjImp): " + ex.toString());
 		}
 	}
-
-	///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	
+	///////////////////////////////////////////////////////////////////////////////////////////////
 	private Http genHttpRequest(String getOrPost, String apiURL) {
 		request = null;
 		try {
@@ -198,8 +161,9 @@ public class DuoTokenObjImpl implements DuoObjInterface {
 
 		return request;
 	}
-	////////////////////////////////////////////////////////////////////////////////////////////////////////////////	
-
+	
+	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	
 	@Override
 	public String getObjById() {
 		throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
@@ -211,7 +175,17 @@ public class DuoTokenObjImpl implements DuoObjInterface {
 	}
 
 	@Override
+	public String getObjByParam(String param1, String param2, String attribute) {
+		throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+	}
+
+	@Override
 	public String createObjByParam(String param1, String param2, String param3, String param4) {
+		throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+	}
+
+	@Override
+	public void associateObjs(String param1, String param2) {
 		throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
 	}
 
@@ -226,7 +200,7 @@ public class DuoTokenObjImpl implements DuoObjInterface {
 	}
 
 	@Override
-	public List<DuoTablet> getAllTablets(String param1) {
+	public List<DuoToken> getAllTokens(String param1) {
 		throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
 	}
 
