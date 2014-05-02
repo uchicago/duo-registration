@@ -26,6 +26,8 @@ import edu.uchicago.duo.web.DuoEnrollController;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.concurrent.Future;
 import org.apache.log4j.Logger;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -158,7 +160,7 @@ public class DuoTokenObjImpl implements DuoObjInterface {
 		return tokens;
 
 	}
-	
+
 	@Override
 	public void deleteObj(String tokenId, String userId) {
 		apiURL = new String();
@@ -169,9 +171,29 @@ public class DuoTokenObjImpl implements DuoObjInterface {
 
 		try {
 			request.executeRequest();
-			logger.info("Successfully Disassociate Token, ID="+tokenId);
+			logger.info("Successfully Disassociate Token, ID=" + tokenId);
 		} catch (Exception ex) {
 			logger.error("Unable to Disassociate Token from Useraccount!!!");
+			logger.error("The Error is(TokenObjImp): " + ex.toString());
+		}
+	}
+
+	@Override
+	public void resyncObj(String tokenId, String resyncCode1, String resyncCode2, String resyncCode3) {
+		apiURL = new String();
+		apiURL = duoTokenApi + "/" + tokenId + "/resync";
+
+		request = genHttpRequest("POST", apiURL);
+		request.addParam("code1", resyncCode1);
+		request.addParam("code2", resyncCode2);
+		request.addParam("code3", resyncCode3);		
+		request = signHttpRequest();
+
+		try {
+			request.executeRequest();
+			logger.info("Successfully RESYNC Token to User account");
+		} catch (Exception ex) {
+			logger.error("Unable to RESYNC Token for User account!!!!");
 			logger.error("The Error is(TokenObjImp): " + ex.toString());
 		}
 	}
@@ -198,7 +220,7 @@ public class DuoTokenObjImpl implements DuoObjInterface {
 
 		return request;
 	}
-	////////////////////////////////////////////////////////////////////////////////////////////////////////////////	
+	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////	
 
 	@Override
 	public String getObjById() {
@@ -211,7 +233,7 @@ public class DuoTokenObjImpl implements DuoObjInterface {
 	}
 
 	@Override
-	public String createObjByParam(String param1, String param2, String param3, String param4) {
+	public String createObjByParam(String param1, String param2, String param3, String param4, String param5) {
 		throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
 	}
 
@@ -230,4 +252,9 @@ public class DuoTokenObjImpl implements DuoObjInterface {
 		throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
 	}
 
+	@Override
+	public Map<String, Object> verifyObj(String param1, String param2) {
+		throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+	}
+	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 }

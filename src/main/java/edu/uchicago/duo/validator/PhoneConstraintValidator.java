@@ -32,7 +32,7 @@ public class PhoneConstraintValidator implements ConstraintValidator<PhoneConstr
 		if(phoneField == null) {
 			return false;
 		}
-		return phoneField.matches("[0-9()-]*");
+		return phoneField.matches("[0-9()\\-\\+]*");
 	}
 
 }

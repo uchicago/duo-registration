@@ -25,6 +25,8 @@ import edu.uchicago.duo.domain.DuoTablet;
 import edu.uchicago.duo.domain.DuoToken;
 import edu.uchicago.duo.web.DuoEnrollController;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.Future;
 import org.apache.log4j.Logger;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -45,7 +47,7 @@ public class DuoUsrObjImpl implements DuoObjInterface {
 	private JSONArray jResults = null;
 
 	@Override
-	public String createObjByParam(String userName, String fullName, String email, String na3) {
+	public String createObjByParam(String userName, String fullName, String email, String na4, String na5) {
 		String userId = null;
 
 		request = genHttpRequest("POST", duoUserApi);
@@ -92,7 +94,7 @@ public class DuoUsrObjImpl implements DuoObjInterface {
 
 	}
 
-	
+	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	private Http genHttpRequest(String getOrPost, String apiURL) {
 		request = null;
 		try {
@@ -114,7 +116,6 @@ public class DuoUsrObjImpl implements DuoObjInterface {
 
 		return request;
 	}
-
 	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	@Override
 	public String objActionById(String param1, String param2) {
@@ -155,4 +156,15 @@ public class DuoUsrObjImpl implements DuoObjInterface {
 	public void deleteObj(String param1, String param2) {
 		throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
 	}
+
+	@Override
+	public void resyncObj(String param1, String param2, String param3, String param4) {
+		throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+	}
+
+	@Override
+	public Map<String, Object> verifyObj(String param1, String param2) {
+		throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+	}
+	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 }

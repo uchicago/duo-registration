@@ -24,14 +24,20 @@ import edu.uchicago.duo.domain.DuoTablet;
 import edu.uchicago.duo.domain.DuoToken;
 import edu.uchicago.duo.web.DuoEnrollController;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.concurrent.Future;
 import org.apache.log4j.Logger;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.scheduling.annotation.AsyncResult;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 @Service("duoPhoneService")
 public class DuoPhoneObjImpl implements DuoObjInterface {
@@ -40,6 +46,7 @@ public class DuoPhoneObjImpl implements DuoObjInterface {
 	private static final Logger logger = Logger.getLogger(DuoEnrollController.class);
 	private static final String duoPhoneApi = "/admin/v1/phones";
 	private static final String duoUserApi = "/admin/v1/users";
+	private static final String duoVerifyApi = "/verify/v1";
 	private String apiURL;
 	private Http request = null;
 	@Autowired(required = true)
@@ -50,12 +57,15 @@ public class DuoPhoneObjImpl implements DuoObjInterface {
 	private MessageSource message;
 
 	@Override
-	public String getObjByParam(String phoneNumber, String extension, String attribute) {
+	public String getObjByParam(String phoneNumber, String landLineExtension, String attribute) {
 		String returnObj = null;
 
-		request = genHttpRequest("GET", duoPhoneApi);
+		request = genHttpRequest("GET", duoPhoneApi, "admin");
 		request.addParam("number", phoneNumber);
-		request = signHttpRequest();
+		if (StringUtils.hasLength(landLineExtension)) {
+			request.addParam("extension", landLineExtension);
+		}
+		request = signHttpRequest("admin");
 
 		try {
 			jResults = (JSONArray) request.executeRequest();
@@ -79,10 +89,10 @@ public class DuoPhoneObjImpl implements DuoObjInterface {
 	}
 
 	@Override
-	public String createObjByParam(String phoneNumber, String device, String deviceOS, String tabletName) {
+	public String createObjByParam(String phoneNumber, String device, String deviceOS, String tabletName, String landLineExtension) {
 		String phoneID = null;
 
-		request = genHttpRequest("POST", duoPhoneApi);
+		request = genHttpRequest("POST", duoPhoneApi, "admin");
 		if (device.equals("mobile")) {
 			request.addParam("number", phoneNumber);
 			request.addParam("type", device);
@@ -94,21 +104,24 @@ public class DuoPhoneObjImpl implements DuoObjInterface {
 			request.addParam("platform", deviceOS);
 			request.addParam("name", tabletName);
 		}
-		
+
 		if (device.equals("landline")) {
 			request.addParam("number", phoneNumber);
 			request.addParam("type", "landline");
+			if (StringUtils.hasLength(landLineExtension)) {
+				request.addParam("extension", landLineExtension);
+			}
 		}
 
 
-		request = signHttpRequest();
+		request = signHttpRequest("admin");
 
 		try {
 			jResult = (JSONObject) request.executeRequest();
 			phoneID = jResult.getString("phone_id");
-			logger.info("Successfully Created Phone, Type:"+device+"/Number:"+phoneNumber);
+			logger.info("Successfully Created Phone, Type:" + device + "/Number:" + phoneNumber);
 		} catch (Exception ex) {
-			logger.error("Unable to Create Duo Phone Object!!!!, Number:"+phoneNumber);
+			logger.error("Unable to Create Duo Phone Object!!!!, Number:" + phoneNumber);
 			logger.error("The Error is(PhoneObjImp): " + ex.toString());
 		}
 
@@ -117,14 +130,15 @@ public class DuoPhoneObjImpl implements DuoObjInterface {
 	}
 
 	@Override
+	@Async
 	public String getObjStatusById(String phoneId) {
 		String status = "false";
 		apiURL = new String();
 		jResult = null;
 
 		apiURL = duoPhoneApi + '/' + phoneId;
-		request = genHttpRequest("GET", apiURL);
-		request = signHttpRequest();
+		request = genHttpRequest("GET", apiURL, "admin");
+		request = signHttpRequest("admin");
 
 		try {
 			jResult = (JSONObject) request.executeRequest();
@@ -143,9 +157,9 @@ public class DuoPhoneObjImpl implements DuoObjInterface {
 		apiURL = new String();
 		apiURL = duoUserApi + "/" + userId + "/phones";
 
-		request = genHttpRequest("POST", apiURL);
+		request = genHttpRequest("POST", apiURL, "admin");
 		request.addParam("phone_id", phoneId);
-		request = signHttpRequest();
+		request = signHttpRequest("admin");
 
 		try {
 			request.executeRequest();
@@ -178,7 +192,7 @@ public class DuoPhoneObjImpl implements DuoObjInterface {
 				break;
 		}
 
-		request = genHttpRequest("POST", apiURL);
+		request = genHttpRequest("POST", apiURL, "admin");
 
 		switch (action) {
 			case "activationSMS":
@@ -186,23 +200,23 @@ public class DuoPhoneObjImpl implements DuoObjInterface {
 				break;
 		}
 
-		request = signHttpRequest();
+		request = signHttpRequest("admin");
 
 		try {
-			
+
 			switch (action) {
 				case "activationSMS":
 					jResult = (JSONObject) request.executeRequest();
 					actionResult = null;
 					logger.info("Activation SMS sent");
-					break;				
+					break;
 				case "qrCode":
 					jResult = (JSONObject) request.executeRequest();
 					actionResult = jResult.getString("activation_barcode");
 					logger.info("Activation QR Code generated");
 					break;
 				case "passcodeSMS":
-					actionResult = (String)request.executeRequest();
+					actionResult = (String) request.executeRequest();
 					logger.info("SMS Passcode Sent Successfully");
 					break;
 			}
@@ -218,8 +232,8 @@ public class DuoPhoneObjImpl implements DuoObjInterface {
 	/**
 	 * Why use UserId instead of UserName??
 	 *
-	 * 1)UserId always SINGLE record, although Username search should only have
-	 * one record also...
+	 * 1)UserId always return SINGLE record, although Username search should
+	 * only have one record also...
 	 *
 	 * 2)The JSON Response code for userID search is either success or User not
 	 * found, easier to capture the exception?
@@ -230,8 +244,8 @@ public class DuoPhoneObjImpl implements DuoObjInterface {
 	public List<DuoPhone> getAllPhones(String userId) {
 		apiURL = new String();
 		apiURL = duoUserApi + "/" + userId;
-		request = genHttpRequest("GET", apiURL);
-		request = signHttpRequest();
+		request = genHttpRequest("GET", apiURL, "admin");
+		request = signHttpRequest("admin");
 
 		jResults = null;
 
@@ -290,8 +304,8 @@ public class DuoPhoneObjImpl implements DuoObjInterface {
 		apiURL = new String();
 		apiURL = duoPhoneApi + "/" + phoneId;
 
-		request = genHttpRequest("DELETE", apiURL);
-		request = signHttpRequest();
+		request = genHttpRequest("DELETE", apiURL, "admin");
+		request = signHttpRequest("admin");
 
 		try {
 			request.executeRequest();
@@ -303,29 +317,41 @@ public class DuoPhoneObjImpl implements DuoObjInterface {
 	}
 
 	//////////////////////////////////////////////////////////////////////////////////////////////////////////
-	private Http genHttpRequest(String getOrPost, String apiURL) {
+	private Http genHttpRequest(String getOrPost, String apiURL, String apiType) {
 		request = null;
 		try {
-			request = new Http(getOrPost, duoAllIKeys.getAdminikeys().getHostkey(), apiURL);
-
+			switch (apiType) {
+				case "admin":
+					request = new Http(getOrPost, duoAllIKeys.getAdminikeys().getHostkey(), apiURL);
+					break;
+				case "verify":
+					request = new Http(getOrPost, duoAllIKeys.getVerifyikeys().getHostkey(), apiURL);
+					break;
+			}
 		} catch (Exception e) {
 		}
 
 		return request;
 	}
 
-	private Http signHttpRequest() {
+	private Http signHttpRequest(String apiType) {
 
 		try {
-			request.signRequest(duoAllIKeys.getAdminikeys().getIkey(), duoAllIKeys.getAdminikeys().getSkey());
-
+			switch (apiType) {
+				case "admin":
+					request.signRequest(duoAllIKeys.getAdminikeys().getIkey(), duoAllIKeys.getAdminikeys().getSkey());
+					break;
+				case "verify":
+					request.signRequest(duoAllIKeys.getVerifyikeys().getIkey(), duoAllIKeys.getVerifyikeys().getSkey());
+					break;
+			}
 		} catch (Exception e) {
 		}
 
 		return request;
 	}
-
 	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 	@Override
 	public String getObjById() {
 		throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
@@ -339,5 +365,69 @@ public class DuoPhoneObjImpl implements DuoObjInterface {
 	@Override
 	public List<DuoToken> getAllTokens(String param1) {
 		throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+	}
+
+	@Override
+	public void resyncObj(String param1, String param2, String param3, String param4) {
+		throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+	}
+	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+	@Override
+	@Async
+	public Map<String, Object> verifyObj(String Number, String action) {
+		String txid = null;
+		String pin = null;
+		String info = null;
+		String state = null;
+
+		jResult = null;
+
+		Map<String, Object> verifyInfo = new HashMap<>();
+
+		apiURL = new String();
+		apiURL = duoVerifyApi + "/" + action;
+
+		switch (action) {
+			case "call":
+				request = genHttpRequest("POST", apiURL, "verify");
+				request.addParam("phone", Number);
+				request.addParam("message", message.getMessage("CALL.Device.Verify", null, Locale.getDefault()));
+				break;
+			case "status":
+				request = genHttpRequest("GET", apiURL, "verify");
+				request.addParam("txid", Number);
+				break;
+
+		}
+
+		request = signHttpRequest("verify");
+
+		try {
+			jResult = (JSONObject) request.executeRequest();
+
+			switch (action) {
+				case "call":
+					txid = jResult.getString("txid");
+					pin = jResult.getString("pin");
+					verifyInfo.put("txid", txid);
+					verifyInfo.put("pin", pin);
+					logger.info("txid=" + txid + ",Pin=" + pin);
+					break;
+				case "status":
+					info = jResult.getString("info");
+					state = jResult.getString("state");
+					verifyInfo.put("info", info);
+					verifyInfo.put("state", state);
+					break;
+			}
+
+		} catch (Exception ex) {
+			logger.error("Unable to Call Phone!!!");
+			logger.error("The Error is(PhoneObjImp): " + ex.toString());
+		}
+
+		return verifyInfo;
+
 	}
 }

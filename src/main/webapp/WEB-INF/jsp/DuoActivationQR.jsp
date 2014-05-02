@@ -6,7 +6,10 @@
 <!DOCTYPE html>
 <html>
     <head>
-        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+		<script src="<c:url value="/resources/js/jquery-1.11.0.min.js" />" ></script>
+		<script src="<c:url value="/resources/js/DuoAsyncStatusCheck.js" />" ></script>
+
+		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
         <title>Duo Activation QR Code</title>
     </head>
     <body>
@@ -16,17 +19,17 @@
 			<h1><spring:message code = "DeviceActivationRequire" /></h1>
 		</c:if>
 
+		<img src="${DuoPerson.QRcode}"><br><br>	
+
+		<form:form method="post" commandName="DuoPerson" id="activecomplete"></form:form>	
+
 		<form:form method="post" commandName="DuoPerson">
-			<img src="${DuoPerson.QRcode}"><br><br>
-			<input type="submit" value="Next" name="enrollsteps"/>
-			<input type="hidden" name="_page" value="5" />
-			<br><br>
-			<input type="submit" value="Send Activation Code via SMS" name="sendsms"/>
-				
+			<input type="submit" value="Send Activation Code via SMS" name="sendsms"/><br>
+			<c:if test="${empty DuoPerson.QRcode}">
+				<input type="submit" value="Generate onscreen QR Code" name="genQRcode"/>
+			</c:if>
 		</form:form>
-		
-		
-		
+
     </body>
 </html>
 

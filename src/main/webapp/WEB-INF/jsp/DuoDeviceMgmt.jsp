@@ -65,7 +65,7 @@
 				</c:forEach>
 			</table>
 		</c:if>
-		
+
 		<c:if test="${displayTablets}">
 
 			<table border="1">
@@ -108,7 +108,7 @@
 				</c:forEach>
 			</table>
 		</c:if>
-		
+
 		<c:if test="${displayTokens}">
 
 			<table border="1">
@@ -127,21 +127,29 @@
 							<td align="center"><c:out value="${token.serial}"/></td>
 							<td>
 								<input type="submit" value="Remove Token" name="removedevice" class="confirmDelete" id="remove${i.index}"/>
+								<input type="submit" value="Resync Token" name="resynctoken" id="resync${i.index}"/>
+								<input type="hidden" name="resyncAction" value="input" />
+								<c:if test="${resyncTokenId == token.id }">
+									<c:if test="${resyncsuccess}">
+										<spring:message code = "TokenResyncSuccess" /></h1>
+									</c:if>
+								</c:if>
 							</td>
 						</tr>
 						<form:hidden path="tokenSerial" value="${token.serial}" />
 						<form:hidden path="tokenId" value="${token.id}" />
+						<form:hidden path="tokenType" value="${token.type}" />
 						<form:hidden path="choosenDevice" value="Token" />
 					</form:form>
 				</c:forEach>
 			</table>
 		</c:if>
-		
+
 		<BR><BR>
 		<form:form method="post">
 			<input type="submit" value="HOME" name="reset"/>
 		</form:form>
-  
+
 
 	</body>
 </html>

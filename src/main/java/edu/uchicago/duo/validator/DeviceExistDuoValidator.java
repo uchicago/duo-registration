@@ -15,13 +15,13 @@
  *
  * Author: Daniel Yu <danielyu@uchicago.edu>
  */
-
 package edu.uchicago.duo.validator;
 
 import edu.uchicago.duo.domain.DuoPersonObj;
 import edu.uchicago.duo.service.DuoObjInterface;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 import org.springframework.validation.Errors;
 import org.springframework.validation.Validator;
 
@@ -43,13 +43,21 @@ public class DeviceExistDuoValidator implements Validator {
 		DuoPersonObj duoPersonObj = (DuoPersonObj) target;
 		String userName;
 		String tokenId;
+		String phoneId = null;
 
 		if (duoPersonObj.getChoosenDevice().matches("mobile|landline")) {
-			userName = duoPhoneService.getObjByParam(duoPersonObj.getPhonenumber(), null, "username");
+			userName = duoPhoneService.getObjByParam(duoPersonObj.getCompletePhonenumber(), duoPersonObj.getLandLineExtension(), "username");
 			if (userName != null && userName.equals(duoPersonObj.getUsername())) {
 				errors.rejectValue("phonenumber", "DeviceExistDuoValidator.alreadyReg");
 			} else if (userName != null) {
 				errors.rejectValue("phonenumber", "DeviceExistDuoValidator.belongSomeoneElse");
+			} else {
+				phoneId = duoPhoneService.createObjByParam(duoPersonObj.getCompletePhonenumber(), "landline", null, null, duoPersonObj.getLandLineExtension());
+				if (StringUtils.hasLength(phoneId)) {
+					duoPhoneService.deleteObj(phoneId, null);
+				} else {
+					errors.rejectValue("phonenumber", "DeviceExistDuoValidator.badnumber");
+				}
 			}
 		}
 

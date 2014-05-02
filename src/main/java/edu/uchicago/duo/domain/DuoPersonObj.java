@@ -35,7 +35,11 @@ public class DuoPersonObj {
 	//Below using Overwritten own validation via Annotation
 	@PhoneConstraint
 	String phonenumber;
+	String countryDialCode;
 	String landLineExtension;
+	String phoneVerifyPin;
+	String phoneVerifyTxid;
+	boolean phoneOwnerVerified;
 	String username;
 	String fullName;
 	String email;
@@ -48,12 +52,21 @@ public class DuoPersonObj {
 	String tokenId;
 	String tokenType;
 	String tokenSerial;
+	@Size(min = 6, max = 6, groups = {TokenResyncValidation.class})
+	String tokenSyncCode1;
+	@Size(min = 6, max = 6, groups = {TokenResyncValidation.class})
+	String tokenSyncCode2;
+	@Size(min = 6, max = 6, groups = {TokenResyncValidation.class})
+	String tokenSyncCode3;
 	/////////////////////////////////////////////
 	List<DuoPhone> phones = new ArrayList<>();
 	List<DuoTablet> tablets = new ArrayList<>();
 	List<DuoToken> tokens = new ArrayList<>();
 	/////////////////////////////////////////////
-
+	
+	//Empty Marker-Tag Interface to tell the validator which group the constraint belongs to...
+	public interface TokenResyncValidation {}
+	
 	public String getPhonenumber() {
 		return phonenumber;
 	}
@@ -61,13 +74,49 @@ public class DuoPersonObj {
 	public void setPhonenumber(String phonenumber) {
 		this.phonenumber = phonenumber;
 	}
+	
+	public String getCompletePhonenumber (){
+		return countryDialCode+phonenumber;
+	}
 
+	public String getCountryDialCode() {
+		return countryDialCode;
+	}
+
+	public void setCountryDialCode(String countryDialCode) {
+		this.countryDialCode = countryDialCode;
+	}
+	
 	public String getLandLineExtension() {
 		return landLineExtension;
 	}
 
 	public void setLandLineExtension(String landLineExtension) {
 		this.landLineExtension = landLineExtension;
+	}
+
+	public String getPhoneVerifyPin() {
+		return phoneVerifyPin;
+	}
+
+	public void setPhoneVerifyPin(String phoneVerifyPin) {
+		this.phoneVerifyPin = phoneVerifyPin;
+	}
+		
+	public String getPhoneVerifyTxid() {
+		return phoneVerifyTxid;
+	}
+
+	public void setPhoneVerifyTxid(String phoneVerifyTxid) {
+		this.phoneVerifyTxid = phoneVerifyTxid;
+	}
+
+	public boolean isPhoneOwnerVerified() {
+		return phoneOwnerVerified;
+	}
+
+	public void setPhoneOwnerVerified(boolean phoneOwnerVerified) {
+		this.phoneOwnerVerified = phoneOwnerVerified;
 	}
 	
 	public String getUsername() {
@@ -166,6 +215,30 @@ public class DuoPersonObj {
 		this.tokenSerial = tokenSerial;
 	}
 
+	public String getTokenSyncCode1() {
+		return tokenSyncCode1;
+	}
+
+	public void setTokenSyncCode1(String tokenSyncCode1) {
+		this.tokenSyncCode1 = tokenSyncCode1;
+	}
+
+	public String getTokenSyncCode2() {
+		return tokenSyncCode2;
+	}
+
+	public void setTokenSyncCode2(String tokenSyncCode2) {
+		this.tokenSyncCode2 = tokenSyncCode2;
+	}
+
+	public String getTokenSyncCode3() {
+		return tokenSyncCode3;
+	}
+
+	public void setTokenSyncCode3(String tokenSyncCode3) {
+		this.tokenSyncCode3 = tokenSyncCode3;
+	}
+		
 	public List<DuoPhone> getPhones() {
 		return phones;
 	}
