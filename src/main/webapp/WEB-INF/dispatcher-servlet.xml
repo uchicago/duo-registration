@@ -19,6 +19,19 @@
 	
 	<mvc:resources mapping="/resources/**" location="/resources/" />
 	
+	<!--	<mvc:interceptors>
+		<mvc:interceptor>
+			<mvc:mapping path="/**/*"/>
+			<bean id="webContentInterceptor" class="org.springframework.web.servlet.mvc.WebContentInterceptor">
+				<property name="cacheSeconds" value="0"/>
+				<property name="useExpiresHeader" value="true"/>
+				<property name="useCacheControlHeader" value="true"/>
+				<property name="useCacheControlNoStore" value="true"/>
+			</bean>
+		</mvc:interceptor>
+	</mvc:interceptors>-->
+	
+	
 	<!--
 	Most controllers will use the ControllerClassNameHandlerMapping above, but
 	for the index controller we are using ParameterizableViewController, so we must
@@ -37,8 +50,6 @@
 		  p:prefix="/WEB-INF/jsp/"
 		  p:suffix=".jsp" >
 		<property name="viewClass" value="org.springframework.web.servlet.view.JstlView"></property>
-		<!--!!!!!!!!!!!!!!!!!!For Testing Only!!!!!!!-->
-		<!--		<property name="exposeContextBeansAsAttributes" value="true"/>-->
 	</bean>
 
 	<!--
@@ -46,14 +57,9 @@
 	-->
 	<bean name="indexController"
 		  class="org.springframework.web.servlet.mvc.ParameterizableViewController"
-		  p:viewName="duo" />
-	
-		<!--	Old way of SPRING-->
-	<!--	 <bean name="/duo.htm" class="edu.uchicago.duo.web.DuoController">
-		<property name="duoallikeys" ref="duoallintegrationkeys" />
-		<property name="duoadminfunc">
-		   <bean class="edu.uchicago.duo.service.DuoAdminFunc"/>
-	   </property>
-	</bean>-->
-	
+		  p:viewName="2FALandingPage" />
+		
+	<mvc:view-controller path="/about2FA" view-name="about2FA" />
+	<mvc:view-controller path="/faq" view-name="2FAfaq" />
+
 </beans>

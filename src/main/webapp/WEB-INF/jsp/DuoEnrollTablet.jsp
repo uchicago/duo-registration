@@ -1,4 +1,13 @@
-<%@taglib uri="http://www.springframework.org/tags/form" prefix="form"%>
+<%-- 
+    Document   : DuoRegistration Program
+    Created on : Nov 25, 2014, 2:16:54 PM
+    Author     : Daniel Yu (danielyu@uchicago.edu)
+	Copyright 2014 University of Chicago
+--%>
+
+<%@ taglib prefix="form" uri="http://www.springframework.org/tags/form"%>
+<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
 <!DOCTYPE html>
 <html>
@@ -11,24 +20,52 @@
 		<form:form method="post" commandName="DuoPerson">
 			<table>
 				<tr>
-					<td>Tablet Operating System: </td>
-					<td>
+					<td colspan="2">
+						<form:label class="control-label" path="tabletName"><b>What operating system does this tablet run?</b></form:label>
+						</td>
+					</tr>
+					<tr>
+						<td>
+
 						<form:select path="deviceOS">
-							<form:option value="NONE" label="--- Select ---"/>
+							<form:option value="" label="--- Select ---"/>
 							<form:options items="${tabletOSList}" />
-						</form:select>
+						</form:select>	
+
 					</td>
-					<td><form:errors path="deviceOS" cssClass="error" /></td>
+					<td>
+						<div class="control-group error">
+							<form:errors path="deviceOS" class="help-inline" />
+						</div>
+					</td>
 				</tr>
 
+				<tr><td colspan="2">&nbsp;</td></tr>
+
 				<tr>
-					<td><form:label path="tabletName">Name Your Tablet:</form:label></td>
-					<td><form:input path="tabletName" /></td>
-					<td><form:errors path="tabletName" cssclass="error" /></td>
+					<td colspan="2">
+						<form:label class="control-label" path="tabletName"><b>Please give your tablet a name:</b></form:label>
+						</td>
+					</tr>
+					<tr>
+						<td><form:input path="tabletName" maxlength="50"/></td>
+					<td>
+						<div class="control-group error">
+							<form:errors path="tabletName" class="help-inline" />
+						</div>
+					</td>
 				</tr>
-				<tr><td><br></td></tr>
+
+
 			</table>
-			<input type="submit" value="Register" name="enrollUserNPhone"/>
+
+			<input type="submit" value="Continue" name="enrollsteps"/>
+			&nbsp&nbsp&nbsp&nbsp
+			<input type="submit" value="Back" name="back" />
+			<input type="hidden" name="_backpage" value="2" />
+			<input type="hidden" name="_page" value="31" />
+
+
 		</form:form>
     </body>
 </html>

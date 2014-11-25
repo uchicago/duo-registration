@@ -2,23 +2,65 @@
 			 xmlns:beans="http://www.springframework.org/schema/beans" 
 			 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 			 xmlns:mvc="http://www.springframework.org/schema/mvc"
+			 xmlns:aop="http://www.springframework.org/schema/aop"
 			 xsi:schemaLocation="http://www.springframework.org/schema/beans
-	http://www.springframework.org/schema/beans/spring-beans-3.0.xsd
+	http://www.springframework.org/schema/beans/spring-beans-3.1.xsd
 	http://www.springframework.org/schema/security
-	http://www.springframework.org/schema/security/spring-security-3.0.3.xsd
-	http://www.springframework.org/schema/mvc http://www.springframework.org/schema/mvc/spring-mvc-3.0.xsd">
+	http://www.springframework.org/schema/security/spring-security-3.1.xsd
+	http://www.springframework.org/schema/mvc http://www.springframework.org/schema/mvc/spring-mvc-3.1.xsd
+	http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-3.1.xsd">
 	
-
+	<!--Spring Security-Simple Form Base Login, BEGIN-->
 	<http auto-config="true">
-		<intercept-url pattern="/index*" access="ROLE_USER" />
+		<intercept-url pattern="/secure**" access="ROLE_USER" />
 	</http>
  
-	<authentication-manager>
-		<authentication-provider>
-			<user-service>
-				<user name="testuser" password="123456" authorities="ROLE_USER" />
-			</user-service>
-		</authentication-provider>
-	</authentication-manager>
- 
+		<authentication-manager>
+			<authentication-provider>
+				<user-service>
+					<user name="DuoTestUser" password="123456" authorities="ROLE_USER" />
+				</user-service>
+			</authentication-provider>
+		</authentication-manager>
+	
+	<!--Spring Security-Simple Form Base Login, END-->
+	
+	<!--///////////////////////////////////////////////////////////////////////////////////////////////////////-->
+	
+	<!--Spring Security - Enabling PreAut for SSO scenario, BEGIN-->
+	<!--	<debug/>  Uncomment this to have verbose debug informations -->
+	<!--
+	<http pattern="/index.htm*" security="none"/>
+	<http pattern="/secure/**" security="none"/>
+	<http pattern="/secure**" security="none"/>
+	<http auto-config='true' create-session="ifRequired" disable-url-rewriting="true" entry-point-ref="http403EntryPoint">
+		<intercept-url pattern="/secure/**" access="ROLE_USER"/>
+		<intercept-url pattern="/secure**" access="ROLE_USER"/> 
+		<intercept-url pattern="/**" access="ROLE_ANONYMOUS,ROLE_USER" />
+		<custom-filter ref="DuoPreAuthFilter" position="PRE_AUTH_FILTER"/>    
+		<session-management session-fixation-protection="newSession"/>
+	</http>
+	
+	<beans:bean id="DuoPreAuthFilter" class="org.springframework.security.web.authentication.preauth.RequestHeaderAuthenticationFilter">
+		<beans:property name="principalRequestHeader" value="uid"/>
+		<beans:property name="exceptionIfHeaderMissing" value="false" />
+		<beans:property name="authenticationManager" ref="authenticationManager" />
+		<beans:property name="authenticationDetailsSource" ref="authenticationDetailsSource"/>
+	</beans:bean>
+	
+	<authentication-manager alias="authenticationManager">
+		<authentication-provider ref="preauthAuthProvider" />
+	</authentication-manager>	
+	
+	<beans:bean id="preauthAuthProvider" class="org.springframework.security.web.authentication.preauth.PreAuthenticatedAuthenticationProvider">
+		<beans:property name="preAuthenticatedUserDetailsService">
+			<beans:bean id="preAuthenticatedUserDetailsService" class="org.springframework.security.web.authentication.preauth.PreAuthenticatedGrantedAuthoritiesUserDetailsService"/>
+		</beans:property>
+	</beans:bean>
+  	
+	<beans:bean id="authenticationDetailsSource" class="edu.uchicago.duo.security.DuoAuthenticationDetailsSource" />
+	
+	<beans:bean id="http403EntryPoint" class="org.springframework.security.web.authentication.Http403ForbiddenEntryPoint"></beans:bean>
+	-->
+	<!--Enabling PreAut for SSO scenario, END-->
 </beans:beans>

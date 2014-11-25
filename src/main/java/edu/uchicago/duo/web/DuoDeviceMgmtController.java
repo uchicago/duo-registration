@@ -20,23 +20,19 @@ package edu.uchicago.duo.web;
 import edu.uchicago.duo.domain.DuoPersonObj;
 import edu.uchicago.duo.service.DuoObjInterface;
 import java.io.UnsupportedEncodingException;
+import java.security.Principal;
 import java.sql.Date;
 import java.text.SimpleDateFormat;
-import java.util.HashMap;
-import java.util.Map;
+import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
-import javax.validation.Valid;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.json.JSONException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.propertyeditors.CustomDateEditor;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.SmartValidator;
-import org.springframework.validation.Validator;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.InitBinder;
 import org.springframework.web.bind.annotation.ModelAttribute;
@@ -45,12 +41,10 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.SessionAttributes;
 import org.springframework.web.bind.support.SessionStatus;
-import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
-import org.springframework.web.servlet.view.RedirectView;
 
 @Controller
-@RequestMapping("/devicemgmt")
+@RequestMapping("/secure/devicemgmt")
 @SessionAttributes("DuoPerson")
 public class DuoDeviceMgmtController {
 
@@ -70,78 +64,105 @@ public class DuoDeviceMgmtController {
 	//
 	@Autowired
 	SmartValidator validator;
-	//
 
+	/**
+	 * **********************************************************
+	 *
+	 * Private Methods Below
+	 *
+	 ***********************************************************
+	 */
+	private String getIPForLog(HttpServletRequest request) {
+		String sourceIPAddr = request.getRemoteAddr();
+		if (sourceIPAddr == null || sourceIPAddr.startsWith("127.")) {
+			sourceIPAddr = request.getHeader("x-forwarded-for");
+		}
+
+		sourceIPAddr = "[" + sourceIPAddr + "]";
+
+		return sourceIPAddr;
+	}
+
+	/**
+	 * **********************************************************
+	 *
+	 * Spring Controller Methods Below
+	 *
+	 ***********************************************************
+	 */
 	@InitBinder
 	public void initBinder(WebDataBinder binder) {
 		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
-
 		binder.registerCustomEditor(Date.class, new CustomDateEditor(dateFormat, true));
-
-	}
-
-	//Temporary Test Controller for Device Controller Button Submission
-	@RequestMapping(method = RequestMethod.POST)
-	public String processPage(@ModelAttribute("DuoPerson") DuoPersonObj duoperson,
-			BindingResult result, HttpSession session, SessionStatus status, ModelMap model) throws UnsupportedEncodingException, JSONException, Exception {
-
-		logger.info("Value We Got!: " + duoperson.getPhone_id());
-		logger.info("Value We Got!: " + duoperson.getChoosenDevice());
-		logger.info("Value We Got!: " + duoperson.getTokenId());
-		logger.info("Value We Got!: " + duoperson.getTokenSerial());
-		duoperson = new DuoPersonObj();
-		initForm(model, duoperson, session, status);
-		//return form view
-		return "DuoDeviceMgmt";
 	}
 
 	@RequestMapping(method = RequestMethod.GET)
-	public String initForm(ModelMap model, @ModelAttribute DuoPersonObj duoperson, HttpSession session, SessionStatus status) {
+	public String initForm(HttpServletRequest request, Principal principal, ModelMap model, @ModelAttribute DuoPersonObj duoperson, HttpSession session, SessionStatus status) {
+
+		//Below getting SSO Attributes for Shibboleth Support(UChicago)
+//		duoperson.setUsername(principal.getName());
+//		duoperson.setFullName(request.getHeader("givenName")+ " " + request.getHeader("sn"));
+//		duoperson.setEmail(request.getHeader("mail"));
+//		duoperson.setChicagoID(request.getHeader("chicagoID"));
+
+		//Below setting Static Attributes for Local Testing
+		duoperson.setUsername("DuoTestUser");
+		duoperson.setFullName("DUO Testuser");
+		duoperson.setEmail("testuser@duotest.com");
+		logger.info("2FA Info - "+getIPForLog(request) + " - " + "Username:" + duoperson.getUsername() + "|SID:" + request.getSession().getId());
+
 		String userId = null;
-		String username = null;
 
-		username = session.getAttribute("username").toString();
-
+		//Check whether User is already registered in the DUO DB, if yes, record that ID, if not, forward them to first timer portal page.
 		if (session.getAttribute("duoUserId") == null) {
-			userId = duoUsrService.getObjByParam(username, null, "userId");
+			userId = duoUsrService.getObjByParam(duoperson.getUsername(), null, "userId");
 			if (userId == null) {
-				logger.info("This User:" + username + " has not yet register with DUO!");
+				logger.info("2FA Info - "+getIPForLog(request) + " - " + duoperson.getUsername() + " landed on DeviceMgmt Page without registering with DUO!?");
 				status.setComplete();
-				return "duo";
+				return "redirect:/secure";
 			}
-			logger.info("Assigned UserID via DUO API Query");
+			//Session Attribute "Duo User ID" - ADDED
+			session.setAttribute("duoUserId", userId);
+			logger.debug("2FA Debug - "+"Username:" + duoperson.getUsername() + "|DuoUserID:" + userId + "retrieved via DUO API Query");
 		} else {
 			userId = session.getAttribute("duoUserId").toString();
-			logger.info("Assigned UserID via Session Variable");
+			logger.debug("2FA Debug - "+"Username:" + duoperson.getUsername() + "|DuoUserID:" + userId + "retrieved via Session Variable");
 		}
 
-
+		//Set Duo UserId
 		duoperson.setUser_id(userId);
-		duoperson.setUsername(username);
+
+		//Retrieve all Devices that the user have 
 		duoperson.setPhones(duoPhoneService.getAllPhones(userId));
 		duoperson.setTablets(duoTabletService.getAllTablets(userId));
 		duoperson.setTokens(duoTokenService.getAllTokens(userId));
 
+		//Set DISPLAY model attributes, display related table only if device > 0
 		if (duoperson.getPhones().size() > 0) {
 			model.addAttribute("displayPhones", true);
-//			logger.info("This user has " + duoperson.getPhones().size() + " phones");
+			logger.debug("2FA Debug - "+getIPForLog(request) + " - " + duoperson.getUsername() + " has " + duoperson.getPhones().size() + " phones");
 		}
 
 		if (duoperson.getTablets().size() > 0) {
 			model.addAttribute("displayTablets", true);
-//			logger.info("This user has " + duoperson.getTablets().size() + " tablets");
+			logger.debug("2FA Debug - "+getIPForLog(request) + " - " + duoperson.getUsername() + " has " + duoperson.getPhones().size() + " tablets");
 		}
 
 		if (duoperson.getTokens().size() > 0) {
 			model.addAttribute("displayTokens", true);
-//			logger.info("This user has " + duoperson.getTokens().size() + " tokens");
+			logger.debug("2FA Debug - "+getIPForLog(request) + " - " + duoperson.getUsername() + " has " + duoperson.getPhones().size() + " tokens");
 		}
 
-
+		//Sync Up All the attributes and push them back into Session Model Attribute
 		model.addAttribute("DuoPerson", duoperson);
 
-		logger.info("Username(DevMgmt):" + duoperson.getUsername());
-		logger.info("UserID(DevMgmt):" + duoperson.getUser_id());
+		//Route DUO Registered User who do not have any devices back to First timer Portal
+		if (duoperson.getPhones().isEmpty() && duoperson.getTablets().isEmpty() && duoperson.getTokens().isEmpty()) {
+			//return form view
+			logger.debug("2FA Debug - "+getIPForLog(request) + " - " + duoperson.getUsername() + " has NO registered devices in DUO");
+
+			return "redirect:/secure";
+		}
 
 		//return form view
 		return "DuoDeviceMgmt";
@@ -149,153 +170,124 @@ public class DuoDeviceMgmtController {
 
 	@RequestMapping(method = RequestMethod.POST, params = "removedevice")
 	public String removeDevice(
-			@ModelAttribute("DuoPerson") DuoPersonObj duoperson,
+			@ModelAttribute("DuoPerson") DuoPersonObj duoperson, HttpServletRequest request,
 			BindingResult result, HttpSession session, SessionStatus status, ModelMap model) throws UnsupportedEncodingException, Exception {
-
-		logger.info("Delete Device(PhoneId)!: " + duoperson.getPhone_id());
-		logger.info("Delete Device(Type)!: " + duoperson.getChoosenDevice());
-		logger.info("Delete Device(TokenId)!: " + duoperson.getTokenId());
-		logger.info("Delete Device(TokenSerial)!: " + duoperson.getTokenSerial());
-		logger.info("Username(DevMgmt):" + duoperson.getUsername());
-		logger.info("UserID(DevMgmt):" + duoperson.getUser_id());
 
 		switch (duoperson.getChoosenDevice()) {
 			case "Mobile":
 			case "Landline":
+				logger.info("2FA Info - "+getIPForLog(request) + " - " + duoperson.getUsername() + " is DELETING mobile/landline: " + duoperson.getPhonenumber());
 				duoPhoneService.deleteObj(duoperson.getPhone_id(), null);
 				break;
 			case "Tablet":
-				duoTabletService.deleteObj(duoperson.getPhone_id(), null);	//In the Duo World, Mobile == Tablet except no phone number, so the delete method is identical between the two service
+				logger.info("2FA Info - "+getIPForLog(request) + " - " + duoperson.getUsername() + " is DELETING tablet: " + duoperson.getTabletName());
+				duoTabletService.deleteObj(duoperson.getPhone_id(), null);
 				break;
 			case "Token":
+				logger.info("2FA Info - "+getIPForLog(request) + " - " + duoperson.getUsername() + " is DELETING token: " + duoperson.getTokenSerial());
 				duoTokenService.deleteObj(duoperson.getTokenId(), duoperson.getUser_id());
 				break;
 		}
 
 		//return form view
-		return "redirect:devicemgmt";
+		return "redirect:/secure/devicemgmt";
 	}
 
 	@RequestMapping(method = RequestMethod.POST, params = "sendsmscode")
 	public String sendSMSCode(
-			@ModelAttribute("DuoPerson") DuoPersonObj duoperson,
-			BindingResult result, HttpSession session, SessionStatus status, ModelMap model) throws UnsupportedEncodingException, Exception {
+			@ModelAttribute("DuoPerson") DuoPersonObj duoperson, BindingResult result, HttpSession session, SessionStatus status,
+			ModelMap model, final RedirectAttributes redirectAttributes, HttpServletRequest request) throws UnsupportedEncodingException, Exception {
 
-		logger.info("SMS Device(PhoneId)!: " + duoperson.getPhone_id());
-		logger.info("SMS Device(Type)!: " + duoperson.getChoosenDevice());
-		logger.info("Device(TokenId)!: " + duoperson.getTokenId());
-		logger.info("Device(TokenSerial)!: " + duoperson.getTokenSerial());
-		logger.info("Username(DevMgmt):" + duoperson.getUsername());
-		logger.info("UserID(DevMgmt):" + duoperson.getUser_id());
-
+		logger.info("2FA Info - "+getIPForLog(request) + " - " + duoperson.getUsername() + " is SMSing passcode to " + duoperson.getPhonenumber());
 		duoPhoneService.objActionById(duoperson.getPhone_id(), "passcodeSMS");
-
+		
+		redirectAttributes.addFlashAttribute("smsPhoneNumber", duoperson.getPhonenumber());
+		redirectAttributes.addFlashAttribute("smsSent", true);
+		
 		//return form view
-		return "redirect:devicemgmt";
+		return "redirect:/secure/devicemgmt";
 	}
 
+	/*
+	 * No Real Need to do any Sanity Check for what type of OS it is for Re-activation since the DuoDeviceMgmt.jsp will only display activation option for
+	 * Mobile and Tablet ONLY.
+	 * Although the Button options via DuoDeviceMgmt are "ACTIVATE" and "REACTIVATE", the code is just treating them the same, which is
+	 * 
+	 * 1) Capture the necessary Data and store it in DuoPerson Object: Phone OS, Phone Type, Phone Number 
+	 * 
+	 * 2) Delete the existing Phone using the Duo Phone ID 
+	 */
 	@RequestMapping(method = RequestMethod.POST, params = "deviceactivation")
-	public String deviceActivation(
-			@RequestParam(value = "action", defaultValue="activate") final String action, @ModelAttribute("DuoPerson") DuoPersonObj duoperson,
-			BindingResult result, HttpSession session, SessionStatus status, ModelMap model) throws UnsupportedEncodingException, Exception {
+	public String deviceActivation( 
+			@ModelAttribute("DuoPerson") DuoPersonObj duoperson, BindingResult result, HttpSession session, SessionStatus status,
+			ModelMap model, final RedirectAttributes redirectAttributes, HttpServletRequest request) throws UnsupportedEncodingException, Exception {
 
-		logger.info("Device Active(PhoneId)!: " + duoperson.getPhone_id());
-		logger.info("Device Active(Type)!: " + duoperson.getChoosenDevice());
-		logger.info("Username(Device Active):" + duoperson.getUsername());
-		logger.info("UserID(Device Active):" + duoperson.getUser_id());
+		String temp = null;
 
-		duoperson.setQRcode(duoPhoneService.objActionById(duoperson.getPhone_id(), "qrCode"));
+		temp = duoperson.getChoosenDevice();
+		duoperson.setChoosenDevice(temp.toLowerCase());		//DUO value is title cased, where our code is not, so just lower all cases
 
-		switch (action) {
-			case "finish":
-				String activeStatus;
-				activeStatus = duoPhoneService.getObjStatusById(duoperson.getPhone_id());
+		temp = duoperson.getDeviceOS();
+		duoperson.setDeviceOS(temp.toLowerCase());			//DUO value is title cased, where our code is not, so just lower all cases
 
-				if (activeStatus.equals("false")) {
-					if (duoperson.getQRcode() == null) {
-						String qrCode = duoPhoneService.objActionById(duoperson.getPhone_id(), "qrCode");
-						duoperson.setQRcode(qrCode);
-					}
-					logger.info("DeviceID:" + duoperson.getPhone_id() + "|| Not Activated");
-					model.put("deviceNotActive", true);
-					return "DuoReActivation";
-				} else {
-					return "redirect:devicemgmt";
-				}
-			case "sendsms":
-				duoPhoneService.objActionById(duoperson.getPhone_id(), "activationSMS");
-				duoperson.setQRcode(null);
-				return "DuoReActivation";
-			case "qrcode":
-				duoperson.setQRcode(duoPhoneService.objActionById(duoperson.getPhone_id(), "qrCode"));
-				break;
+		logger.info("2FA Info - "+getIPForLog(request) + " - " +"REACTIVATION Process-Delete First:" + duoperson.getUsername() + " is DELETING mobile/landline: " + duoperson.getPhonenumber());
+		duoPhoneService.deleteObj(duoperson.getPhone_id(), null);
+		duoperson.setPhone_id(null);
+		logger.info("2FA Info - "+getIPForLog(request) + " - " +"REACTIVATION Process-Device Data:" + duoperson.getChoosenDevice() + '|' + duoperson.getPhonenumber() + '|' + duoperson.getDeviceOS() + " PID:" + duoperson.getPhone_id() + '|' + duoperson.getTabletName());
+		
+		redirectAttributes.addFlashAttribute("devReActivate", true);
+		
+		return "redirect:/secure/enrollment/deviceReactivation";
 
-		}
-
-
-
-		//return form view
-		return "DuoReActivation";
-		//return "redirect:enrollment/activation";
-		//return "forward:enrollment/activation";
-		//return new RedirectView("/xxxx", true);
 	}
-
-	
 
 	@RequestMapping(method = RequestMethod.POST, params = "resynctoken")
 	public String resyncToken(
-			@RequestParam("resyncAction")
-			final String resyncAction,
-			@ModelAttribute("DuoPerson") DuoPersonObj duoperson,
-			BindingResult result, HttpSession session, SessionStatus status, ModelMap model, final RedirectAttributes redirectAttributes) throws UnsupportedEncodingException, Exception {
-
-
-		logger.info("Resync Device Type: " + duoperson.getChoosenDevice());
-		logger.info("Resync(TokenId)!: " + duoperson.getTokenId());
-		logger.info("Resync(TokenSerial)!: " + duoperson.getTokenSerial());
-		logger.info("Username(DevMgmt):" + duoperson.getUsername());
-		logger.info("UserID(DevMgmt):" + duoperson.getUser_id());
+			@RequestParam("resyncAction") final String resyncAction, @ModelAttribute("DuoPerson") DuoPersonObj duoperson,
+			BindingResult result, HttpSession session, SessionStatus status, ModelMap model, HttpServletRequest request,
+			final RedirectAttributes redirectAttributes) throws UnsupportedEncodingException, Exception {
 
 		switch (resyncAction) {
 			case "input":
 				return "DuoResyncToken";
 			case "resync":
-				logger.info("Resync(Code 1)!: " + duoperson.getTokenSyncCode1());
-				logger.info("Resync(Code 2)!: " + duoperson.getTokenSyncCode2());
-				logger.info("Resync(Code 3)!: " + duoperson.getTokenSyncCode3());
+				logger.debug("2FA Debug - "+getIPForLog(request) + " - " + duoperson.getUsername() + "|Token: " + duoperson.getTokenSerial() + " |Resync(Code1):" + duoperson.getTokenSyncCode1());
+				logger.debug("2FA Debug - "+getIPForLog(request) + " - " + duoperson.getUsername() + "|Token: " + duoperson.getTokenSerial() + " |Resync(Code2):" + duoperson.getTokenSyncCode2());
+				logger.debug("2FA Debug - "+getIPForLog(request) + " - " + duoperson.getUsername() + "|Token: " + duoperson.getTokenSerial() + " |Resync(Code3):" + duoperson.getTokenSyncCode3());
 
 				/*
-				 * Calling it manually, if using the @validated automatically, see below
+				 * Calling validator manually, if using the @validated automatically, see below example:
 				 * @Validated({DuoPersonObj.TokenResyncValidation.class})
 				 */
 				validator.validate(duoperson, result, DuoPersonObj.TokenResyncValidation.class);
+
 				if (result.hasErrors()) {
 					return "DuoResyncToken";
 				}
 				break;
 		}
 		duoTokenService.resyncObj(duoperson.getTokenId(), duoperson.getTokenSyncCode1(), duoperson.getTokenSyncCode2(), duoperson.getTokenSyncCode3());
-
+		logger.info("2FA Info - "+getIPForLog(request) + " - " + duoperson.getUsername() + "|Token: " + duoperson.getTokenSerial() + " RESYNC SUCCESS");
 		redirectAttributes.addFlashAttribute("resyncTokenId", duoperson.getTokenId());
+		redirectAttributes.addFlashAttribute("resyncTokenSN", duoperson.getTokenSerial());
 		redirectAttributes.addFlashAttribute("resyncsuccess", true);
 
-
 		//return form view
-		return "redirect:devicemgmt";
+		return "redirect:/secure/devicemgmt";
 	}
 
 	@RequestMapping(method = RequestMethod.POST, params = "cancel")
 	public String cancel(ModelMap model, @ModelAttribute("DuoPerson") DuoPersonObj duoperson, HttpSession session, SessionStatus status) {
 
 		status.setComplete();
-		return "redirect:devicemgmt";
+		return "redirect:/secure/devicemgmt";
 	}
 
-	@RequestMapping(method = RequestMethod.POST, params = "reset")
-	public String reset(ModelMap model, @ModelAttribute("DuoPerson") DuoPersonObj duoperson, HttpSession session, SessionStatus status) {
+	//May not need it anylonger
+	@RequestMapping(method = RequestMethod.POST, params = "home")
+	public String goHome(ModelMap model, @ModelAttribute("DuoPerson") DuoPersonObj duoperson, HttpSession session, SessionStatus status) {
 
 		status.setComplete();
-		return "duo";
+		return "redirect:/secure";
 	}
 }
