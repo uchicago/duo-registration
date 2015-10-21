@@ -29,8 +29,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Future;
 import java.util.logging.Level;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Logger;
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -82,8 +84,25 @@ public class DuoUsrObjImpl implements DuoObjInterface {
 
 			switch (attribute) {
 				case "userId":
-					returnObj = jResults.getJSONObject(0).getString("user_id");
-					;
+					returnObj = jResults.getJSONObject(0).getString("user_id");					
+					break;
+				case "username":
+					returnObj = jResults.getJSONObject(0).getString("username");					
+					break;
+				case "fullName":
+					returnObj = jResults.getJSONObject(0).getString("realname");					
+					break;
+				case "email":
+					returnObj = jResults.getJSONObject(0).getString("email");					
+					break;
+				case "primaryPhoneNumber":
+					JSONArray phones_arr = jResults.getJSONObject(0).optJSONArray("phones");
+					if( phones_arr != null ) {
+						JSONObject phone_obj = phones_arr.optJSONObject(0);
+						if( phone_obj != null ) {
+							returnObj = phone_obj.getString("number");
+						}
+					}					
 					break;
 			}
 
@@ -95,6 +114,34 @@ public class DuoUsrObjImpl implements DuoObjInterface {
 
 		return returnObj;
 
+	}
+	
+	public String getBypassCodeForUserid(String userid) {
+		String returnObj = null;
+
+		if (StringUtils.isBlank(userid)) {
+			throw new IllegalArgumentException("userid cannot be blank");
+		}
+		userid = userid.trim();
+
+		String duoUserBypassCodeApi = duoUserApi + "/" + userid + "/bypass_codes";
+		request = genHttpRequest("POST", duoUserBypassCodeApi);
+		request.addParam("count", "1"); // only generate 1 bypass-code
+		request.addParam("valid_secs", "86400"); // valid for 24 hours
+		request.addParam("reuse_count", "0"); // valid for unlimited number of uses
+		request = signHttpRequest();
+
+		try {
+			returnObj = (String) ((JSONArray) request.executeRequest()).get(0);
+		} catch (JSONException je) {
+			logger.debug("2FA Debug - " + "Unable to parse JSON!!!");
+			logger.debug("2FA Debug - " + "The Error is: " + je.toString());
+		} catch (Exception ex) {
+			logger.debug("2FA Debug - " + "User Not Exist!!!If triggered by Validation is a good thing, not error");
+			logger.debug("2FA Debug - " + "The Error is: " + ex.toString());
+		}
+
+		return returnObj;
 	}
 
 	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
