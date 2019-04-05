@@ -16,6 +16,17 @@
 		<spring.version>3.1.1.RELEASE</spring.version>
 	</properties>
 
+	<dependencyManagement>
+                <!--It looks like this is actually not being used, perhaps it should be removed altogether, but patch it for now and remove it later after further review-->
+                <dependencies>
+                         <dependency>
+                        <groupId>org.springframework</groupId>
+                        <artifactId>spring-core</artifactId>
+                        <version>4.0.0.RELEASE</version>
+                        </dependency>
+                </dependencies>
+        </dependencyManagement>
+
 	<dependencies>
 		<dependency>
 			<groupId>org.springframework</groupId>
