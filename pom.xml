@@ -13,7 +13,7 @@
 		<endorsed.dir>${project.build.directory}/endorsed</endorsed.dir>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<netbeans.hint.deploy.server>Tomcat</netbeans.hint.deploy.server>
-		<spring.version>3.1.1.RELEASE</spring.version>
+		<spring.version>3.2.5.RELEASE</spring.version>
 	</properties>
 
 	<dependencyManagement>
